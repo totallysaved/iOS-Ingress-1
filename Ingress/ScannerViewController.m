@@ -20,42 +20,54 @@
 #import "ColorOverlayView.h"
 
 @implementation ScannerViewController {
-	UIWebView *dataCalcWebView;
 	UIView *rangeCircleView;
 	CLLocationManager *locationManager;
+	CLLocation *lastLocation;
+	BOOL firstRefreshProfile;
 }
 
 - (void)viewDidLoad {
     [super viewDidLoad];
 
+	levelLabel.font = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:32];
+	nicknameLabel.font = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:20];
+	firstRefreshProfile = YES;
+
+	[xmIndicator setProgressImage:[[UIImage imageNamed:@"progressImage-aliens.png"] resizableImageWithCapInsets:UIEdgeInsetsMake(7, 7, 7, 7)]];
+	[xmIndicator setTrackImage:[[UIImage imageNamed:@"trackImage.png"] resizableImageWithCapInsets:UIEdgeInsetsMake(2, 2, 2, 2)]];
+
 	locationManager = [[CLLocationManager alloc] init];
     locationManager.delegate = self;
     locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation;
-//	[locationManager startUpdatingLocation];
+	
+	[locationManager startUpdatingLocation];
 //	[locationManager startUpdatingHeading];
+
+	if (YES) { // TODO: Free moving allowed for debug only
+		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^(void){
+			[locationManager stopUpdatingLocation];
+			[_mapView setScrollEnabled:YES];
+		});
+	}
 
 	[[AppDelegate instance] setMapView:_mapView];
 
-	rangeCircleView = [UIView new];
-	rangeCircleView.frame = CGRectMake(0, 0, 0, 0);
-	rangeCircleView.center = _mapView.center;
-	rangeCircleView.backgroundColor = [UIColor clearColor];
-	rangeCircleView.opaque = NO;
-	rangeCircleView.userInteractionEnabled = NO;
-	rangeCircleView.layer.cornerRadius = 0;
-	rangeCircleView.layer.masksToBounds = YES;
-	rangeCircleView.layer.borderWidth = 2;
-	rangeCircleView.layer.borderColor = [[[UIColor blueColor] colorWithAlphaComponent:0.25] CGColor];
-	[self.view addSubview:rangeCircleView];
+	UIPinchGestureRecognizer *recognizer = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(handlePinch:)];
+	[_mapView addGestureRecognizer:recognizer];
 
-	[NSTimer scheduledTimerWithTimeInterval:.01 target:self selector:@selector(updateCircle) userInfo:nil repeats:YES];
-
-	dataCalcWebView = [[UIWebView alloc] initWithFrame:CGRectMake(0, 0, 1, 1)];
-	[dataCalcWebView setTag:2];
-	[dataCalcWebView setHidden:YES];
-	[dataCalcWebView setDelegate:self];
-	[self.view addSubview:dataCalcWebView];
-	[dataCalcWebView loadHTMLString:[NSString stringWithFormat:@"<html><head><script>%@</script></head><body></body></html>", [NSString stringWithContentsOfURL:[[NSBundle mainBundle] URLForResource:@"map_data_calc_tools" withExtension:@"js"] encoding:NSUTF8StringEncoding error:nil]] baseURL:nil];
+//	rangeCircleView = [UIView new];
+//	rangeCircleView.frame = CGRectMake(0, 0, 0, 0);
+//	rangeCircleView.center = _mapView.center;
+//	rangeCircleView.backgroundColor = [UIColor clearColor];
+//	rangeCircleView.opaque = NO;
+//	rangeCircleView.userInteractionEnabled = NO;
+//	rangeCircleView.layer.cornerRadius = 0;
+//	rangeCircleView.layer.masksToBounds = YES;
+//	rangeCircleView.layer.borderWidth = 2;
+//	rangeCircleView.layer.borderColor = [[[UIColor blueColor] colorWithAlphaComponent:0.25] CGColor];
+//	[self.view addSubview:rangeCircleView];
+//
+//	[NSTimer scheduledTimerWithTimeInterval:.01 target:self selector:@selector(updateCircle) userInfo:nil repeats:YES];
 
 //	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^(void){
 //		[_mapView setRegion:MKCoordinateRegionMakeWithDistance(_mapView.userLocation.location.coordinate, 150, 150) animated:NO];
@@ -63,7 +75,7 @@
 //		[_mapView setShowsUserLocation:YES];
 //	});
 
-	[[DB sharedInstance] addPortalsToMapView];
+//	[[DB sharedInstance] addPortalsToMapView];
 
 //	UILongPressGestureRecognizer *xmpLongPressGesture = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(xmpLongPressGestureHandler:)];
 //	[fireXmpButton addGestureRecognizer:xmpLongPressGesture];
@@ -85,7 +97,7 @@
 	
 //	UITapGestureRecognizer *mapViewGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(mapTapped:)];
 //	[_mapView addGestureRecognizer:mapViewGestureRecognizer];
-	
+
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -99,6 +111,8 @@
 //	}];
 	
 //	[[DB sharedInstance] addPortalsToMapView];
+
+	[self refreshProfile];
 
 }
 
@@ -131,179 +145,19 @@
 
 - (IBAction)refresh {
 
-	[[SoundManager sharedManager] playSound:@"Sound/sfx_ui_success.aif"];
+//	[[SoundManager sharedManager] playSound:@"Sound/sfx_ui_success.aif"];
 
-	if ([[API sharedInstance] intelcsrftoken] && [[API sharedInstance] intelACSID]) {
-
-		[[DB sharedInstance] removeAllPortals];
-		[[DB sharedInstance] removeAllEnergyGlobs];
-
-		CGPoint nePoint = CGPointMake(_mapView.bounds.origin.x + _mapView.bounds.size.width, _mapView.bounds.origin.y);
-		CGPoint swPoint = CGPointMake((_mapView.bounds.origin.x), (_mapView.bounds.origin.y + _mapView.bounds.size.height));
-		CLLocationCoordinate2D neCoord = [_mapView convertPoint:nePoint toCoordinateFromView:_mapView];
-		CLLocationCoordinate2D swCoord = [_mapView convertPoint:swPoint toCoordinateFromView:_mapView];
-
-		NSString *tilesDictStr = [dataCalcWebView stringByEvaluatingJavaScriptFromString:[NSString stringWithFormat:@"test(%d, %g, %g, %g, %g, %g);", _mapView.zoomLevel, _mapView.centerCoordinate.latitude, swCoord.latitude, swCoord.longitude, neCoord.latitude, neCoord.longitude]];
-		NSDictionary *tilesDict = [NSJSONSerialization JSONObjectWithData:[tilesDictStr dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil];
-		[tilesDict enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
-
-			NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"http://www.ingress.com/rpc/dashboard.getThinnedEntitiesV2"]];
-			[request setHTTPMethod:@"POST"];
-
-			NSDictionary *params = @{
-				@"method": @"dashboard.getThinnedEntitiesV2",
-				@"zoom": @(_mapView.zoomLevel),
-				@"boundsParamsList": obj
-			};
-
-			NSError *error;
-			NSData *HTTPData = [NSJSONSerialization dataWithJSONObject:params options:0 error:&error];
-			if (error) { NSLog(@"error: %@", error); }
-
-			[request setHTTPBody:HTTPData];
-
-			NSDictionary *headers = @{
-				@"Content-Type": @"application/json; charset=UTF-8",
-				@"Accept": @"application/json, text/javascript, */*; q=0.01",
-				@"Accept-Charset": @"windows-1250,utf-8;q=0.7,*;q=0.3",
-				@"Accept-Encoding": @"gzip,deflate,sdch",
-				@"Accept-Language": @"en,cs;q=0.8",
-				@"Connection": @"keep-alive",
-				@"User-Agent": @"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_3) AppleWebKit/537.31 (KHTML, like Gecko) Chrome/26.0.1410.65 Safari/537.31",
-				@"X-Requested-With": @"XMLHttpRequest",
-				@"Host" : @"www.ingress.com",
-				@"Origin": @"http://www.ingress.com",
-				@"Referer": @"http://www.ingress.com/intel",
-				@"Connection": @"Keep-Alive",
-				@"Content-Length": [NSString stringWithFormat:@"%d", HTTPData.length],
-				@"X-CSRFToken": [[API sharedInstance] intelcsrftoken],
-				@"Cookie": [NSString stringWithFormat:@"csrftoken=%@; ACSID=%@", [[API sharedInstance] intelcsrftoken], [[API sharedInstance] intelACSID]]
-			};
-
-			[request setAllHTTPHeaderFields:headers];
-
-			[NSURLConnection sendAsynchronousRequest:request queue:[[API sharedInstance] networkQueue] completionHandler:^(NSURLResponse *response, NSData *data, NSError *error) {
-
-				if (error) { NSLog(@"NSURLConnection error: %@", error); }
-
-				NSError *jsonParseError;
-				id responseObj;
-				if (data) {
-					responseObj = [NSJSONSerialization JSONObjectWithData:data options:0 error:&jsonParseError];
-				}
-				if (jsonParseError) {
-					NSLog(@"jsonParseError: %@", jsonParseError);
-					NSLog(@"text response: %@", [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
-				}
-
-				//NSLog(@"getThinnedEntitiesV2: %@", responseObj);
-
-				NSDictionary *map = responseObj[@"result"][@"map"];
-
-				[map enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
-
-					dispatch_async(dispatch_get_main_queue(), ^{
-						[[API sharedInstance] processGameEntities:obj[@"gameEntities"]];
-						[[API sharedInstance] processDeletedEntityGuids:obj[@"deletedGameEntityGuids"]];
-					});
-
-					dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC));
-					dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-						[[DB sharedInstance] addPortalsToMapView];
-					});
-
-				}];
-				
-			}];
-			
-		}];
-
-//		double magic = [self convertCenterLat:_mapView.centerCoordinate.latitude];
-//		double R = [self calculateR:magic];
-//		CGPoint nePoint = CGPointMake(_mapView.bounds.origin.x + _mapView.bounds.size.width, _mapView.bounds.origin.y);
-//		CGPoint swPoint = CGPointMake((_mapView.bounds.origin.x), (_mapView.bounds.origin.y + _mapView.bounds.size.height));
-//		CLLocationCoordinate2D neCoord = [_mapView convertPoint:nePoint toCoordinateFromView:_mapView];
-//		CLLocationCoordinate2D swCoord = [_mapView convertPoint:swPoint toCoordinateFromView:_mapView];
-//
-//		// convert to point values
-//		CGPoint topRight = [self convertLatLngToPoint:neCoord magic:magic R:R];
-//		CGPoint bottomLeft = [self convertLatLngToPoint:swCoord magic:magic R:R];
-//
-////		NSLog(@"%d_%.0f_%.0f", _mapView.zoomLevel-1, topRight.x, topRight.y);
-//
-//		// how many quadrants intersect the current view?
-//		int quadsX = ABS(bottomLeft.x - topRight.x);
-//		int quadsY = ABS(bottomLeft.y - topRight.y);
-//
-//		// will group requests by second-last quad-key quadrant
-//		NSMutableDictionary *tiles = [NSMutableDictionary dictionary];
-//
-//		// walk in x-direction, starts right goes left
-//		for (int i = 0; i <= quadsX; i++) {
-//			int x = ABS(topRight.x - i);
-//			NSString *qk = [self pointToQuadKey:CGPointMake(x, topRight.y)];
-//			NSArray *bnds = [self convertPointToLatLng:CGPointMake(x, topRight.y) magic:magic R:R];
-//
-//			if (qk.length > 0) {
-//				NSString *slice = [qk substringWithRange:NSMakeRange(0, 1)];
-//				if (![tiles objectForKey:slice]) {
-//					[tiles setObject:[NSMutableArray array] forKey:slice];
-//				}
-//				NSMutableArray *sliceArray = [tiles objectForKey:slice];
-//				[sliceArray addObject:[self generateBoundsParams:qk bounds:bnds]];
-//			}
-//
-//			// walk in y-direction, starts top, goes down
-//			for (int j = 1; j <= quadsY; j++) {
-//				NSString *qk = [self pointToQuadKey:CGPointMake(x, topRight.y + j)];
-//				NSArray *bnds = [self convertPointToLatLng:CGPointMake(x, topRight.y + j) magic:magic R:R];
-//
-//				if (qk.length > 0) {
-//					NSString *slice = [qk substringWithRange:NSMakeRange(0, 1)];
-//					if (![tiles objectForKey:slice]) {
-//						[tiles setObject:[NSMutableArray array] forKey:slice];
-//					}
-//					NSMutableArray *sliceArray = [tiles objectForKey:slice];
-//					[sliceArray addObject:[self generateBoundsParams:qk bounds:bnds]];
-//				}
-//
-//			}
-//		}
-//
-//		NSMutableArray *tilesArray = [NSMutableArray array];
-//		[tiles enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
-//			[tilesArray addObject:obj];
-//		}];
-//
-//		NSLog(@"tilesArray: %@", tilesArray);
-
-	} else {
-		NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"http://www.ingress.com/intel"]];
-		UIWebView *webView = [[UIWebView alloc] initWithFrame:CGRectMake(0, 0, 1, 1)];
-		[webView setTag:1];
-		[webView setHidden:YES];
-		[webView setDelegate:self];
-		[webView loadRequest:request];
-		[self.view addSubview:webView];
-	}
-
-//	__block MBProgressHUD *HUD = [[MBProgressHUD alloc] initWithView:self.view];
-//	HUD.userInteractionEnabled = YES;
-//	HUD.dimBackground = YES;
-//	HUD.mode = MBProgressHUDModeIndeterminate;
-//	HUD.labelFont = [UIFont fontWithName:@"Coda-Regular" size:16];
-//	HUD.labelText = @"Loading...";
-//	[self.view addSubview:HUD];
-//	[HUD show:YES];
-//	
+	__block MBProgressHUD *HUD = [[MBProgressHUD alloc] initWithView:self.view];
+	HUD.userInteractionEnabled = YES;
+	HUD.dimBackground = YES;
+	HUD.mode = MBProgressHUDModeIndeterminate;
+	[self.view addSubview:HUD];
+	[HUD show:YES];
+	
 	[[API sharedInstance] getObjectsWithCompletionHandler:^{
-//		[[DB sharedInstance] addPortalsToMapView];
-//		[HUD hide:YES];
+		[[DB sharedInstance] addPortalsToMapView];
+		[HUD hide:YES];
 	}];
-//
-//	[[API sharedInstance] getInventoryWithCompletionHandler:^{
-//
-//	}];
 
 }
 
@@ -371,40 +225,69 @@
 //	};
 //}
 
-#pragma mark - UIWebViewDelegate
 
-- (void)webViewDidFinishLoad:(UIWebView *)webView {
-	if (webView.tag == 1) {
-		
-		NSString *url =  [webView stringByEvaluatingJavaScriptFromString:@"document.getElementsByClassName('button_link')[0].href;"];
-		if (url && url.length > 0) {
-			[webView stringByEvaluatingJavaScriptFromString:[NSString stringWithFormat:@"location.href = '%@';", url]];
-		} else {
-			NSHTTPCookieStorage *sharedHTTPCookieStorage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
-			NSArray *cookies = [sharedHTTPCookieStorage cookiesForURL:webView.request.URL];
-			for (NSHTTPCookie *cookie in cookies) {
-				if ([cookie.name isEqualToString:@"csrftoken"]) {
-					[[API sharedInstance] setIntelcsrftoken:cookie.value];
-				} else if ([cookie.name isEqualToString:@"ACSID"]) {
-					[[API sharedInstance] setIntelACSID:cookie.value];
-				}
-			}
-			[self refresh];
-			[webView removeFromSuperview];
-			webView = nil;
-		}
-		
+
+- (void)refreshProfile {
+
+	NSDictionary *playerInfo = [[API sharedInstance] playerInfo];
+
+	int ap = [playerInfo[@"ap"] intValue];
+	int level = [API levelForAp:ap];
+	int lvlImg = [API levelImageForAp:ap];
+	float energy = [playerInfo[@"energy"] floatValue];
+	float maxEnergy = [API maxXmForLevel:level];
+
+	NSMutableParagraphStyle *pStyle = [NSMutableParagraphStyle new];
+    pStyle.alignment = NSTextAlignmentRight;
+
+	UIColor *teamColor = [API colorForFaction:playerInfo[@"team"]];
+
+	if ([playerInfo[@"team"] isEqualToString:@"ALIENS"]) {
+		levelImage.image = [UIImage imageNamed:[NSString stringWithFormat:@"ap_icon_enl_%d.png", lvlImg]];
+	} else {
+		levelImage.image = [UIImage imageNamed:[NSString stringWithFormat:@"ap_icon_hum_%d.png", lvlImg]];
 	}
+
+	levelLabel.text = [NSString stringWithFormat:@"%d", level];
+
+	nicknameLabel.textColor = teamColor;
+	nicknameLabel.text = playerInfo[@"nickname"];
+
+	if ([[API sharedInstance].playerInfo[@"team"] isEqualToString:@"RESISTANCE"]) {
+		[xmIndicator setProgressImage:[[UIImage imageNamed:@"progressImage-resistance.png"] resizableImageWithCapInsets:UIEdgeInsetsMake(7, 7, 7, 7)]];
+	} else {
+		[xmIndicator setProgressImage:[[UIImage imageNamed:@"progressImage-aliens.png"] resizableImageWithCapInsets:UIEdgeInsetsMake(7, 7, 7, 7)]];
+	}
+
+	[xmIndicator setProgress:(energy/maxEnergy) animated:!firstRefreshProfile];
+
+	firstRefreshProfile = NO;
+
 }
 
-#pragma mark - Circle
+#pragma mark - Pinch Gesture
 
-- (void)updateCircle {
-	CGFloat diameter = 100/((_mapView.region.span.latitudeDelta * 111200) / _mapView.bounds.size.width);
-	rangeCircleView.frame = CGRectMake(0, 0, diameter, diameter);
-	rangeCircleView.center = _mapView.center;
-	rangeCircleView.layer.cornerRadius = diameter/2;
+- (void)handlePinch:(UIPinchGestureRecognizer*)recognizer {
+    static MKCoordinateRegion originalRegion;
+    if (recognizer.state == UIGestureRecognizerStateBegan) {
+        originalRegion = _mapView.region;
+    }
+
+    double latdelta = originalRegion.span.latitudeDelta / recognizer.scale;
+    double londelta = originalRegion.span.longitudeDelta / recognizer.scale;
+    MKCoordinateSpan span = MKCoordinateSpanMake(latdelta, londelta);
+
+    [_mapView setRegion:MKCoordinateRegionMake(originalRegion.center, span) animated:NO];
 }
+
+//#pragma mark - Circle
+//
+//- (void)updateCircle {
+//	CGFloat diameter = 100/((_mapView.region.span.latitudeDelta * 111200) / _mapView.bounds.size.width);
+//	rangeCircleView.frame = CGRectMake(0, 0, diameter, diameter);
+//	rangeCircleView.center = _mapView.center;
+//	rangeCircleView.layer.cornerRadius = diameter/2;
+//}
 
 //#pragma mark - KVO
 //
@@ -441,9 +324,16 @@
 - (void)mapView:(MKMapView *)mapView regionDidChangeAnimated:(BOOL)animated {
 
 	if (mapView.zoomLevel < 16) {
-        [mapView setCenterCoordinate:locationManager.location.coordinate zoomLevel:16 animated:NO];
+        [mapView setCenterCoordinate:_mapView.centerCoordinate zoomLevel:16 animated:NO];
 		return;
     }
+
+	CLLocation *mapLocation = [[CLLocation alloc] initWithLatitude:_mapView.centerCoordinate.latitude longitude:_mapView.centerCoordinate.longitude];
+	CLLocationDistance meters = [mapLocation distanceFromLocation:lastLocation];
+	if (meters == -1 || meters >= 10) {
+		lastLocation = mapLocation;
+		[self refresh];
+	}
 
 }
 

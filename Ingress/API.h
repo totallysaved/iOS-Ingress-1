@@ -28,8 +28,6 @@ typedef void (^SoundCompletionBlock)(void);
 @property (nonatomic, strong) NSOperationQueue *notificationQueue;
 @property (nonatomic, strong) NSString *xsrfToken;
 @property (nonatomic, strong) NSString *SACSID;
-@property (nonatomic, strong) NSString *intelcsrftoken;
-@property (nonatomic, strong) NSString *intelACSID;
 @property (nonatomic, strong) NSDictionary *playerInfo;
 @property (nonatomic) NSInteger numberOfEnergyToCollect;
 
@@ -53,8 +51,12 @@ typedef void (^SoundCompletionBlock)(void);
 + (UIColor *)colorForLevel:(int)level;
 + (UIColor *)colorForFaction:(NSString *)faction;
 
++ (NSDictionary *)sounds;
++ (float)durationOfSound:(NSString *)soundName;
++ (NSArray *)soundsForNumber:(int)number;
 //- (void)playBackgroundMusic;
 //- (void)playSoundNamed:(NSString *)name completionHandler:(void (^)(void))handler;
+- (void)playSound:(NSString *)soundName;
 - (void)playSounds:(NSArray *)soundNames;
 
 - (NSString *)currentE6Location;
@@ -80,6 +82,7 @@ typedef void (^SoundCompletionBlock)(void);
 - (void)addMod:(Item *)modItem toItem:(Item *)modableItem toSlot:(int)slot completionHandler:(void (^)(NSString *errorStr))handler;
 - (void)dropItemWithGuid:(NSString *)guid completionHandler:(void (^)(void))handler;
 - (void)pickUpItemWithGuid:(NSString *)guid completionHandler:(void (^)(NSString *errorStr))handler;
+- (void)usePowerCube:(PowerCube *)powerCube completionHandler:(void (^)(void))handler;
 - (void)rechargePortal:(Portal *)portal completionHandler:(void (^)(void))handler;
 
 - (void)cheatSetPlayerLevel;

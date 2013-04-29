@@ -11,14 +11,15 @@
 #define UIColorFromRGB(rgbValue) [UIColor colorWithRed:((float)((rgbValue & 0xFF0000) >> 16))/255.0 \
 green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/255.0 alpha:1.0]
 
-@implementation API
+@implementation API {
+	BOOL isSoundPlaying;
+	NSMutableArray *soundsQueue;
+}
 
 @synthesize networkQueue = _networkQueue;
 @synthesize notificationQueue = _notificationQueue;
 @synthesize xsrfToken = _xsrfToken;
 @synthesize SACSID = _SACSID;
-@synthesize intelcsrftoken = _intelcsrftoken;
-@synthesize intelACSID = _intelACSID;
 @synthesize playerInfo = _playerInfo;
 @synthesize numberOfEnergyToCollect = _numberOfEnergyToCollect;
 
@@ -37,6 +38,7 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 - (id)init {
     self = [super init];
 	if (self) {
+		soundsQueue = [NSMutableArray array];
 		self.networkQueue = [NSOperationQueue new];
         self.notificationQueue = [NSOperationQueue new];
 		self.numberOfEnergyToCollect = 0;
@@ -227,22 +229,281 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 
 #pragma mark - Sound
 
-- (float)durationOfSound:(NSString *)soundName {
-	AVAsset *audioAsset = [AVAsset assetWithURL:[[NSBundle mainBundle] URLForResource:soundName withExtension:@"aif" subdirectory:@"Sound"]];
-	CMTime audioDuration = audioAsset.duration;
-	return CMTimeGetSeconds(audioDuration);
++ (NSDictionary *)sounds {
+	return @{
+		@"SFX_RINGTONE": @{@"file": @"sfx_ringtone.aif", @"duration": @(2561)},
+		@"SFX_SONAR": @{@"file": @"sfx_sonar.aif", @"duration": @(2056)},
+		@"SFX_TYPING": @{@"file": @"sfx_typing.aif", @"duration": @(1857)},
+		@"SFX_UI_BACK": @{@"file": @"sfx_ui_back.aif", @"duration": @(92)},
+		@"SFX_UI_FAIL": @{@"file": @"sfx_ui_fail.aif", @"duration": @(278)},
+		@"SFX_UI_SUCCESS": @{@"file": @"sfx_ui_success.aif", @"duration": @(404)},
+		@"SFX_XM_PICKUP": @{@"file": @"sfx_xm_pickup.aif", @"duration": @(696)},
+		@"SFX_THROB": @{@"file": @"sfx_throbbing_wheels.aif", @"duration": @(3890)},
+		@"SFX_ZOOM_1": @{@"file": @"sfx_zoom_1.aif", @"duration": @(4388)},
+		@"SFX_ZOOM_2": @{@"file": @"sfx_zoom_2.aif", @"duration": @(3947)},
+		@"SFX_ZOOM_3": @{@"file": @"sfx_zoom_3.aif", @"duration": @(4086)},
+		@"SFX_ZOOM_ACQUIRE_TARGET": @{@"file": @"sfx_zoom_acquire_target.aif", @"duration": @(1394)},
+		@"SFX_AMBIENT_ALIEN_BASE": @{@"file": @"sfx_ambient_alien_base.aif", @"duration": @(26795)},
+		@"SFX_AMBIENT_HUMAN_BASE": @{@"file": @"sfx_ambient_human_base.aif", @"duration": @(30023)},
+		@"SFX_AMBIENT_NEUTRAL_BASE": @{@"file": @"sfx_ambient_neutral_base.aif", @"duration": @(30023)},
+		@"SFX_AMBIENT_SCANNER_BASE": @{@"file": @"sfx_ambient_scanner_base.aif", @"duration": @(7977)},
+		@"SFX_AMBIENT_SPACE_BASE": @{@"file": @"sfx_ambient_space_base.aif", @"duration": @(8986)},
+		@"SFX_AMBIENT_SPACE_BASE2": @{@"file": @"sfx_ambient_space_base2.aif", @"duration": @(8800)},
+		@"SFX_AMBIENT_SCANNER_BEEPS": @{@"file": @"sfx_ambient_scanner_beeps.aif", @"duration": @(1963)},
+		@"SFX_AMBIENT_SCANNER_RING": @{@"file": @"sfx_ambient_scanner_ring.aif", @"duration": @(3960)},
+		@"SFX_AMBIENT_SCANNER_SWELL": @{@"file": @"sfx_ambient_scanner_swell.aif", @"duration": @(2901)},
+		@"SFX_AMBIENT_SCANNER_WIND": @{@"file": @"sfx_ambient_scanner_wind.aif", @"duration": @(3960)},
+		@"SFX_AMBIENT_ALIEN_HEARTBEAT": @{@"file": @"sfx_ambient_alien_heartbeat.aif", @"duration": @(3078)},
+		@"SFX_AMBIENT_ALIEN_STATIC": @{@"file": @"sfx_ambient_alien_static.aif", @"duration": @(5075)},
+		@"SFX_AMBIENT_ALIEN_WRAITH_ALT": @{@"file": @"sfx_ambient_alien_wraith_alt.aif", @"duration": @(4076)},
+		@"SFX_AMBIENT_ALIEN_WRAITH": @{@"file": @"sfx_ambient_alien_wraith.aif", @"duration": @(5075)},
+		@"SFX_AMBIENT_HUMAN_CRYSTAL": @{@"file": @"sfx_ambient_human_crystal.aif", @"duration": @(4958)},
+		@"SFX_AMBIENT_HUMAN_ENERGY_PULSE": @{@"file": @"sfx_ambient_human_energy_pulse.aif", @"duration": @(5051)},
+		@"SFX_AMBIENT_HUMAN_PULSING_STEREO": @{@"file": @"sfx_ambient_human_pulsing_stereo.aif", @"duration": @(8070)},
+		@"SFX_AMBIENT_HUMAN_PULSING_WARM": @{@"file": @"sfx_ambient_human_pulsing_warm.aif", @"duration": @(5075)},
+		@"SFX_AMBIENT_NEUTRAL_CRYSTAL": @{@"file": @"sfx_ambient_neutral_crystal.aif", @"duration": @(7095)},
+		@"SFX_AMBIENT_NEUTRAL_IMPACTS": @{@"file": @"sfx_ambient_neutral_impacts.aif", @"duration": @(5051)},
+		@"SFX_AMBIENT_NEUTRAL_WHALE_ALT": @{@"file": @"sfx_ambient_neutral_whale_alt.aif", @"duration": @(4076)},
+		@"SFX_AMBIENT_NEUTRAL_WHALE": @{@"file": @"sfx_ambient_neutral_whale.aif", @"duration": @(4076)},
+		@"SFX_AMBIENT_SPACE_ALIEN": @{@"file": @"sfx_ambient_space_alien.aif", @"duration": @(3111)},
+		@"SFX_AMBIENT_SPACE_FEMALE": @{@"file": @"sfx_ambient_space_female.aif", @"duration": @(3552)},
+		@"SFX_AMBIENT_SPACE_TRANSMISSION3": @{@"file": @"sfx_ambient_space_transmission3.aif", @"duration": @(998)},
+		@"SFX_AMBIENT_SPACE_TRANSMISSION4": @{@"file": @"sfx_ambient_space_transmission4.aif", @"duration": @(1393)},
+		@"SFX_AMBIENT_SPACE_GRID142": @{@"file": @"sfx_ambient_space_grid142.aif", @"duration": @(1017)},
+		@"SFX_AMBIENT_SPACE_MAGNIFICATION": @{@"file": @"sfx_ambient_space_magnification.aif", @"duration": @(1516)},
+		@"SFX_AMBIENT_SPACE_LATTITUDE": @{@"file": @"sfx_ambient_space_lattitude.aif", @"duration": @(1301)},
+		@"SFX_DROP_RESOURCE": @{@"file": @"sfx_drop_resource.aif", @"duration": @(1114)},
+		@"SPEECH_ABANDONED": @{@"file": @"speech_abandoned.aif", @"duration": @(744)},
+		@"SPEECH_ACCESS_LEVEL_ACHIEVED": @{@"file": @"speech_access_level_achieved.aif", @"duration": @(1327)},
+		@"SPEECH_ACTIVATED": @{@"file": @"speech_activated.aif", @"duration": @(782)},
+		@"SPEECH_ADDED": @{@"file": @"speech_added.aif", @"duration": @(523)},
+		@"SPEECH_ACQUIRED": @{@"file": @"speech_acquired.aif", @"duration": @(580)},
+		@"SPEECH_ARCHIVED": @{@"file": @"speech_archived.aif", @"duration": @(767)},
+		@"SPEECH_ATTACK": @{@"file": @"speech_attack.aif", @"duration": @(700)},
+		@"SPEECH_ATTACK_IN_PROGRESS": @{@"file": @"speech_attack_in_progress.aif", @"duration": @(1365)},
+		@"SPEECH_AVAILABLE": @{@"file": @"speech_available.aif", @"duration": @(735)},
+		@"SPEECH_CODENAME_ALREADY_ASSIGNED": @{@"file": @"speech_codename_already_assigned.aif", @"duration": @(3043)},
+		@"SPEECH_CODENAME_CHOOSE": @{@"file": @"speech_codename_choose.aif", @"duration": @(9193)},
+		@"SPEECH_CODENAME_CONFIRM": @{@"file": @"speech_codename_confirm.aif", @"duration": @(2689)},
+		@"SPEECH_CODENAME_CONFIRMATION": @{@"file": @"speech_codename_confirmation.aif", @"duration": @(33237)},
+		@"SPEECH_COLLAPSED": @{@"file": @"speech_collapsed.aif", @"duration": @(724)},
+		@"SPEECH_COMMUNICATION_RECEIVED": @{@"file": @"speech_communication_received.aif", @"duration": @(1290)},
+		@"SPEECH_COMPLETE": @{@"file": @"speech_complete.aif", @"duration": @(698)},
+		@"SPEECH_COOLDOWN_ACTIVE": @{@"file": @"speech_cooldown_active.aif", @"duration": @(1118)},
+		@"SPEECH_CRITICAL": @{@"file": @"speech_critical.aif", @"duration": @(593)},
+		@"SPEECH_DEPLETED": @{@"file": @"speech_depleted.aif", @"duration": @(666)},
+		@"SPEECH_DEPLOYED": @{@"file": @"speech_deployed.aif", @"duration": @(557)},
+		@"SPEECH_DETECTED": @{@"file": @"speech_detected.aif", @"duration": @(645)},
+		@"SPEECH_DIRECTION_EAST": @{@"file": @"speech_direction_east.aif", @"duration": @(441)},
+		@"SPEECH_DIRECTION_NORTH": @{@"file": @"speech_direction_north.aif", @"duration": @(605)},
+		@"SPEECH_DIRECTION_NORTH_EAST": @{@"file": @"speech_direction_north_east.aif", @"duration": @(696)},
+		@"SPEECH_DIRECTION_NORTH_WEST": @{@"file": @"speech_direction_north_west.aif", @"duration": @(789)},
+		@"SPEECH_DIRECTION_SOUTH": @{@"file": @"speech_direction_south.aif", @"duration": @(580)},
+		@"SPEECH_DIRECTION_SOUTH_EAST": @{@"file": @"speech_direction_south_east.aif", @"duration": @(743)},
+		@"SPEECH_DIRECTION_SOUTH_WEST": @{@"file": @"speech_direction_south_west.aif", @"duration": @(743)},
+		@"SPEECH_DIRECTION_WEST": @{@"file": @"speech_direction_west.aif", @"duration": @(464)},
+		@"SPEECH_DRAINED": @{@"file": @"speech_drained.aif", @"duration": @(602)},
+		@"SPEECH_ENLIGHTENED": @{@"file": @"speech_enlightened.aif", @"duration": @(692)},
+		@"SPEECH_ESTABLISHING_PORTAL_LINK": @{@"file": @"speech_establishing_portal_link.aif", @"duration": @(1439)},
+		@"SPEECH_EXCELLENT_WORK": @{@"file": @"speech_excellent_work.aif", @"duration": @(921)},
+		@"SPEECH_FACTION_CHOICE_ENLIGHTENED": @{@"file": @"speech_faction_choice_enlightened.aif", @"duration": @(19311)},
+		@"SPEECH_FACTION_CHOICE_ENLIGHTENED_ALT": @{@"file": @"speech_faction_choice_enlightened_alt.aif", @"duration": @(7672)},
+		@"SPEECH_FACTION_CHOICE_ENLIGHTENED_START": @{@"file": @"speech_faction_choice_enlightened_start.aif", @"duration": @(12868)},
+		@"SPEECH_FACTION_CHOICE_HUMANIST": @{@"file": @"speech_faction_choice_humanist.aif", @"duration": @(9872)},
+		@"SPEECH_FACTION_CHOICE_HUMANIST_ALT": @{@"file": @"speech_faction_choice_humanist_alt.aif", @"duration": @(13132)},
+		@"SPEECH_FACTION_CHOICE_HUMANIST_START": @{@"file": @"speech_faction_choice_humanist_start.aif", @"duration": @(8880)},
+		@"SPEECH_FAILED": @{@"file": @"speech_failed.aif", @"duration": @(605)},
+		@"SPEECH_FIELD": @{@"file": @"speech_field.aif", @"duration": @(605)},
+		@"SPEECH_FIELD_ESTABLISHED": @{@"file": @"speech_field_established.aif", @"duration": @(1226)},
+		@"SPEECH_FROM_PRESENT_LOCATION": @{@"file": @"speech_from_present_location.aif", @"duration": @(1345)},
+		@"SPEECH_GOOD_WORK": @{@"file": @"speech_good_work.aif", @"duration": @(603)},
+		@"SPEECH_HACKER": @{@"file": @"speech_hacker.aif", @"duration": @(581)},
+		@"SPEECH_HACKING": @{@"file": @"speech_hacking.aif", @"duration": @(642)},
+		@"SPEECH_HUMANIST": @{@"file": @"speech_humanist.aif", @"duration": @(788)},
+		@"SPEECH_IN_RANGE": @{@"file": @"speech_in_range.aif", @"duration": @(673)},
+		@"SPEECH_INCOMING_MESSAGE": @{@"file": @"speech_incoming_message.aif", @"duration": @(1133)},
+		@"SPEECH_KILOMETERS": @{@"file": @"speech_kilometers.aif", @"duration": @(719)},
+		@"SPEECH_LINK": @{@"file": @"speech_link.aif", @"duration": @(590)},
+		@"SPEECH_LOST": @{@"file": @"speech_lost.aif", @"duration": @(671)},
+		@"SPEECH_MEDIA": @{@"file": @"speech_media.aif", @"duration": @(645)},
+		@"SPEECH_METERS": @{@"file": @"speech_meters.aif", @"duration": @(557)},
+		@"SPEECH_MINE": @{@"file": @"speech_mine.aif", @"duration": @(535)},
+		@"SPEECH_MINUTES": @{@"file": @"speech_minutes.aif", @"duration": @(487)},
+		@"SPEECH_MISSION": @{@"file": @"speech_mission.aif", @"duration": @(550)},
+		@"SPEECH_MISSION_0_INTRO": @{@"file": @"speech_mission_0_intro.aif", @"duration": @(18237)},
+		@"SPEECH_MISSION_1B_COMPLETE": @{@"file": @"speech_mission_1b_complete.aif", @"duration": @(3139)},
+		@"SPEECH_MISSION_1B_INTRO": @{@"file": @"speech_mission_1b_intro.aif", @"duration": @(14554)},
+		@"SPEECH_MISSION_1B_OBJECTIVE": @{@"file": @"speech_mission_1b_objective.aif", @"duration": @(4143)},
+		@"SPEECH_MISSION_1_COMPLETE": @{@"file": @"speech_mission_1_complete.aif", @"duration": @(5670)},
+		@"SPEECH_MISSION_1_INTRO": @{@"file": @"speech_mission_1_intro.aif", @"duration": @(16760)},
+		@"SPEECH_MISSION_2_COMPLETE": @{@"file": @"speech_mission_2_complete.aif", @"duration": @(16017)},
+		@"SPEECH_MISSION_2_INTRO": @{@"file": @"speech_mission_2_intro.aif", @"duration": @(14154)},
+		@"SPEECH_MISSION_2_PRE_INTRO": @{@"file": @"speech_mission_2_pre_intro.aif", @"duration": @(8973)},
+		@"SPEECH_MISSION_3_CLOSING": @{@"file": @"speech_mission_3_closing.aif", @"duration": @(2854)},
+		@"SPEECH_MISSION_3_INTRO": @{@"file": @"speech_mission_3_intro.aif", @"duration": @(12865)},
+		@"SPEECH_MISSION_4_COMPLETE": @{@"file": @"speech_mission_4_complete.aif", @"duration": @(4384)},
+		@"SPEECH_MISSION_4_INTRO": @{@"file": @"speech_mission_4_intro.aif", @"duration": @(8499)},
+		@"SPEECH_MISSION_5_COMPLETE": @{@"file": @"speech_mission_5_complete.aif", @"duration": @(2723)},
+		@"SPEECH_MISSION_5_HACKING_COMPLETE": @{@"file": @"speech_mission_5_hacking_complete.aif", @"duration": @(3757)},
+		@"SPEECH_MISSION_5_INTRO": @{@"file": @"speech_mission_5_intro.aif", @"duration": @(15811)},
+		@"SPEECH_MISSION_5_RECHARGE_RESONATORS": @{@"file": @"speech_mission_5_recharge_resonators.aif", @"duration": @(7722)},
+		@"SPEECH_MISSION_6_COMPLETE": @{@"file": @"speech_mission_6_complete.aif", @"duration": @(20147)},
+		@"SPEECH_MISSION_6_FIRST_PORTAL_KEY": @{@"file": @"speech_mission_6_first_portal_key.aif", @"duration": @(6137)},
+		@"SPEECH_MISSION_6_INTRO": @{@"file": @"speech_mission_6_intro.aif", @"duration": @(27612)},
+		@"SPEECH_MISSION_6_SECOND_PORTAL": @{@"file": @"speech_mission_6_second_portal.aif", @"duration": @(6215)},
+		@"SPEECH_MISSION_6_SECOND_PORTAL_RESONATED": @{@"file": @"speech_mission_6_second_portal_resonated.aif", @"duration": @(5211)},
+		@"SPEECH_MISSION_7_COMPLETE": @{@"file": @"speech_mission_7_complete.aif", @"duration": @(31023)},
+		@"SPEECH_MISSION_7_FIRST_LINK": @{@"file": @"speech_mission_7_first_link.aif", @"duration": @(2454)},
+		@"SPEECH_MISSION_7_INTRO": @{@"file": @"speech_mission_7_intro.aif", @"duration": @(21140)},
+		@"SPEECH_MISSION_7_SECOND_LINK": @{@"file": @"speech_mission_7_second_link.aif", @"duration": @(4088)},
+		@"SPEECH_MISSION_7_THIRD_PORTAL": @{@"file": @"speech_mission_7_third_portal.aif", @"duration": @(2622)},
+		@"SPEECH_MISSION_ACHIEVED_HUMAN": @{@"file": @"speech_mission_achieved_human.aif", @"duration": @(2947)},
+		@"SPEECH_MORE_PORTALS": @{@"file": @"speech_more_portals.aif", @"duration": @(1017)},
+		@"SPEECH_MULTIPLE_PORTAL_ATTACKS": @{@"file": @"speech_multiple_portal_attacks.aif", @"duration": @(1557)},
+		@"SPEECH_NEUTRAL": @{@"file": @"speech_neutral.aif", @"duration": @(625)},
+		@"SPEECH_NEXT": @{@"file": @"speech_next.aif", @"duration": @(599)},
+		@"SPEECH_NUMBER_001": @{@"file": @"speech_number_001.aif", @"duration": @(361)},
+		@"SPEECH_NUMBER_002": @{@"file": @"speech_number_002.aif", @"duration": @(355)},
+		@"SPEECH_NUMBER_003": @{@"file": @"speech_number_003.aif", @"duration": @(372)},
+		@"SPEECH_NUMBER_004": @{@"file": @"speech_number_004.aif", @"duration": @(454)},
+		@"SPEECH_NUMBER_005": @{@"file": @"speech_number_005.aif", @"duration": @(534)},
+		@"SPEECH_NUMBER_006": @{@"file": @"speech_number_006.aif", @"duration": @(534)},
+		@"SPEECH_NUMBER_007": @{@"file": @"speech_number_007.aif", @"duration": @(483)},
+		@"SPEECH_NUMBER_008": @{@"file": @"speech_number_008.aif", @"duration": @(348)},
+		@"SPEECH_NUMBER_009": @{@"file": @"speech_number_009.aif", @"duration": @(457)},
+		@"SPEECH_NUMBER_010": @{@"file": @"speech_number_010.aif", @"duration": @(404)},
+		@"SPEECH_NUMBER_011": @{@"file": @"speech_number_011.aif", @"duration": @(483)},
+		@"SPEECH_NUMBER_012": @{@"file": @"speech_number_012.aif", @"duration": @(510)},
+		@"SPEECH_NUMBER_013": @{@"file": @"speech_number_013.aif", @"duration": @(599)},
+		@"SPEECH_NUMBER_014": @{@"file": @"speech_number_014.aif", @"duration": @(642)},
+		@"SPEECH_NUMBER_015": @{@"file": @"speech_number_015.aif", @"duration": @(622)},
+		@"SPEECH_NUMBER_016": @{@"file": @"speech_number_016.aif", @"duration": @(712)},
+		@"SPEECH_NUMBER_017": @{@"file": @"speech_number_017.aif", @"duration": @(738)},
+		@"SPEECH_NUMBER_018": @{@"file": @"speech_number_018.aif", @"duration": @(581)},
+		@"SPEECH_NUMBER_019": @{@"file": @"speech_number_019.aif", @"duration": @(674)},
+		@"SPEECH_NUMBER_020": @{@"file": @"speech_number_020.aif", @"duration": @(419)},
+		@"SPEECH_NUMBER_025": @{@"file": @"speech_number_025.aif", @"duration": @(766)},
+		@"SPEECH_NUMBER_030": @{@"file": @"speech_number_030.aif", @"duration": @(491)},
+		@"SPEECH_NUMBER_040": @{@"file": @"speech_number_040.aif", @"duration": @(503)},
+		@"SPEECH_NUMBER_050": @{@"file": @"speech_number_050.aif", @"duration": @(471)},
+		@"SPEECH_NUMBER_060": @{@"file": @"speech_number_060.aif", @"duration": @(570)},
+		@"SPEECH_NUMBER_070": @{@"file": @"speech_number_070.aif", @"duration": @(657)},
+		@"SPEECH_NUMBER_075": @{@"file": @"speech_number_075.aif", @"duration": @(1081)},
+		@"SPEECH_NUMBER_080": @{@"file": @"speech_number_080.aif", @"duration": @(535)},
+		@"SPEECH_NUMBER_090": @{@"file": @"speech_number_090.aif", @"duration": @(622)},
+		@"SPEECH_NUMBER_100": @{@"file": @"speech_number_100.aif", @"duration": @(580)},
+		@"SPEECH_NUMBER_200": @{@"file": @"speech_number_200.aif", @"duration": @(626)},
+		@"SPEECH_NUMBER_300": @{@"file": @"speech_number_300.aif", @"duration": @(719)},
+		@"SPEECH_NUMBER_400": @{@"file": @"speech_number_400.aif", @"duration": @(719)},
+		@"SPEECH_NUMBER_500": @{@"file": @"speech_number_500.aif", @"duration": @(764)},
+		@"SPEECH_NUMBER_600": @{@"file": @"speech_number_600.aif", @"duration": @(743)},
+		@"SPEECH_NUMBER_700": @{@"file": @"speech_number_700.aif", @"duration": @(766)},
+		@"SPEECH_NUMBER_800": @{@"file": @"speech_number_800.aif", @"duration": @(673)},
+		@"SPEECH_NUMBER_900": @{@"file": @"speech_number_900.aif", @"duration": @(719)},
+		@"SPEECH_OFFLINE": @{@"file": @"speech_offline.aif", @"duration": @(721)},
+		@"SPEECH_ONLINE": @{@"file": @"speech_online.aif", @"duration": @(692)},
+		@"SPEECH_PERCENT": @{@"file": @"speech_percent.aif", @"duration": @(510)},
+		@"SPEECH_POINT": @{@"file": @"speech_point.aif", @"duration": @(576)},
+		@"SPEECH_PORTAL": @{@"file": @"speech_portal.aif", @"duration": @(506)},
+		@"SPEECH_PORTAL_ATTACK": @{@"file": @"speech_portal_attack.aif", @"duration": @(997)},
+		@"SPEECH_PORTAL_FIELD": @{@"file": @"speech_portal_field.aif", @"duration": @(930)},
+		@"SPEECH_PORTAL_IN_RANGE": @{@"file": @"speech_portal_in_range.aif", @"duration": @(1255)},
+		@"SPEECH_PORTAL_KEY": @{@"file": @"speech_portalkey.aif", @"duration": @(767)},
+		@"SPEECH_PORTAL_LINK": @{@"file": @"speech_portal_link.aif", @"duration": @(878)},
+		@"SPEECH_PORTAL_LINK_ESTABLISHED": @{@"file": @"speech_portal_link_established.aif", @"duration": @(1393)},
+		@"SPEECH_PORTAL_XM": @{@"file": @"speech_portal_xm.aif", @"duration": @(1043)},
+		@"SPEECH_POSSIBLE": @{@"file": @"speech_possible.aif", @"duration": @(634)},
+		@"SPEECH_POWER_CUBE": @{@"file": @"speech_power_cube.aif", @"duration": @(821)},
+		@"SPEECH_RECHARGED": @{@"file": @"speech_recharged.aif", @"duration": @(872)},
+		@"SPEECH_REDUCED": @{@"file": @"speech_reduced.aif", @"duration": @(712)},
+		@"SPEECH_REFUGE": @{@"file": @"speech_refuge.aif", @"duration": @(785)},
+		@"SPEECH_RELEASED": @{@"file": @"speech_released.aif", @"duration": @(626)},
+		@"SPEECH_REMAINING": @{@"file": @"speech_remaining.aif", @"duration": @(692)},
+		@"SPEECH_REQUIRED": @{@"file": @"speech_required.aif", @"duration": @(724)},
+		@"SPEECH_RESONATOR": @{@"file": @"speech_resonator.aif", @"duration": @(590)},
+		@"SPEECH_RESONATOR_DESTROYED": @{@"file": @"speech_resonator_destroyed.aif", @"duration": @(1253)},
+		@"SPEECH_SATURATED": @{@"file": @"speech_saturated.aif", @"duration": @(866)},
+		@"SPEECH_SCANNER": @{@"file": @"speech_scanner.aif", @"duration": @(674)},
+		@"SPEECH_SECONDS": @{@"file": @"speech_seconds.aif", @"duration": @(680)},
+		@"SPEECH_SEVERED": @{@"file": @"speech_severed.aif", @"duration": @(567)},
+		@"SPEECH_SHIELD": @{@"file": @"speech_shield.aif", @"duration": @(637)},
+		@"SPEECH_TARGET": @{@"file": @"speech_target.aif", @"duration": @(464)},
+		@"SPEECH_TESLA": @{@"file": @"speech_tesla.aif", @"duration": @(628)},
+		@"SPEECH_UNSUCCESSFUL": @{@"file": @"speech_unsuccessful.aif", @"duration": @(918)},
+		@"SPEECH_UPGRADED": @{@"file": @"speech_upgraded.aif", @"duration": @(712)},
+		@"SPEECH_WEAPONS": @{@"file": @"speech_weapons.aif", @"duration": @(709)},
+		@"SPEECH_WELCOME_ABOUTTIME": @{@"file": @"speech_welcome_abouttime.aif", @"duration": @(2831)},
+		@"SPEECH_WELCOME_BACK": @{@"file": @"speech_welcome_back.aif", @"duration": @(892)},
+		@"SPEECH_WELCOME_ITSBEEN": @{@"file": @"speech_welcome_itsbeen.aif", @"duration": @(785)},
+		@"SPEECH_WELCOME_LAST_LOGIN": @{@"file": @"speech_welcome_last_login.aif", @"duration": @(1824)},
+		@"SPEECH_WELCOME_LONGTIME": @{@"file": @"speech_welcome_longtime.aif", @"duration": @(4120)},
+		@"SPEECH_WELCOME_WORRIEDABOUTYOU": @{@"file": @"speech_welcome_worriedaboutyou.aif", @"duration": @(1441)},
+		@"SPEECH_XM": @{@"file": @"speech_xm.aif", @"duration": @(680)},
+		@"SPEECH_XM_LEVELS": @{@"file": @"speech_xm_levels.aif", @"duration": @(1124)},
+		@"SPEECH_XM_REQUIRED_FOR_THIS_PORTAL": @{@"file": @"speech_xm_required_for_this_portal.aif", @"duration": @(1920)},
+		@"SPEECH_XM_RESERVE": @{@"file": @"speech_xm_reserve.aif", @"duration": @(1118)},
+		@"SPEECH_XM_RESERVES": @{@"file": @"speech_xm_reserves.aif", @"duration": @(1272)},
+		@"SPEECH_XMP": @{@"file": @"speech_xmp.aif", @"duration": @(866)},
+		@"SPEECH_YOUVE_BEEN_HIT": @{@"file": @"speech_youve_been_hit.aif", @"duration": @(696)},
+		@"SPEECH_YOU_ARE_UNDER_ATTACK": @{@"file": @"speech_you_are_under_attack.aif", @"duration": @(1095)},
+		@"SPEECH_YOU_HAVE_SUFFICIENT_ENERGY_TO_HACK_YOUR_TARGET": @{@"file": @"speech_you_have_sufficient_energy_to_hack_your_target.aif", @"duration": @(2343)},
+		@"SPEECH_ZOOM_ACQUIRING": @{@"file": @"speech_zoom_acquiring.aif", @"duration": @(1208)},
+		@"SPEECH_ZOOM_DOWNLOADING": @{@"file": @"speech_zoom_downloading.aif", @"duration": @(2007)},
+		@"SPEECH_ZOOM_LOCKON": @{@"file": @"speech_zoom_lockon.aif", @"duration": @(1470)},
+		@"SPEECH_ZOOMDOWN_INTRO": @{@"file": @"speech_zoomdown_intro.aif", @"duration": @(28152)},
+		@"SPEECH_ZOOMDOWN_TRIANGULATING": @{@"file": @"speech_zoomdown_triangulating.aif", @"duration": @(1861)},
+	};
+}
+
++ (float)durationOfSound:(NSString *)soundName {
+	return [[API sounds][soundName][@"duration"] floatValue]/1000.;
+}
+
++ (NSArray *)soundsForNumber:(int)number {
+
+	if (number > 0 && number < 10) {
+		return @[[NSString stringWithFormat:@"SPEECH_NUMBER_00%d", number]];
+	} else if (number >= 10 && number <= 20) {
+		return @[[NSString stringWithFormat:@"SPEECH_NUMBER_0%d", number]];
+	} else if (number == 25 || number == 30 || number == 40 || number == 50 || number == 60 || number == 70 || number == 75 || number == 80 || number == 90) {
+		return @[[NSString stringWithFormat:@"SPEECH_NUMBER_0%d", number]];
+	} else if (number == 100 || number == 200 || number == 300 || number == 400 || number == 500 || number == 600 || number == 700 || number == 800 || number == 900) {
+		return @[[NSString stringWithFormat:@"SPEECH_NUMBER_%d", number]];
+	} else if (number > 20 && number < 100) {
+		int tens = (int)(number/10)*10;
+		int units = number-tens;
+		return @[[NSString stringWithFormat:@"SPEECH_NUMBER_0%d", tens], [NSString stringWithFormat:@"SPEECH_NUMBER_00%d", units]];
+	}
+
+	return @[];
+
+}
+
+- (void)playSound:(NSString *)soundName {
+	[soundsQueue addObject:soundName];
+	[self checkSoundQueue];
 }
 
 - (void)playSounds:(NSArray *)soundNames {
-	
-	int i = 0;
-	for (NSString *soundName in soundNames) {
-		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, i * ([self durationOfSound:soundName]+.1) * NSEC_PER_SEC), dispatch_get_main_queue(), ^(void){
-			[[SoundManager sharedManager] playSound:[NSString stringWithFormat:@"Sound/%@.aif", soundName]];
+	[soundsQueue addObjectsFromArray:soundNames];
+	[self checkSoundQueue];
+}
+
+- (void)checkSoundQueue {
+	if (!isSoundPlaying && soundsQueue.count > 0) {
+
+		NSString *soundName = soundsQueue[0];
+		[[SoundManager sharedManager] playSound:[NSString stringWithFormat:@"Sound/%@", [API sounds][soundName][@"file"]]];
+		isSoundPlaying = YES;
+
+		dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)([API durationOfSound:soundName] * NSEC_PER_SEC));
+		dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+			[soundsQueue removeObject:soundName];
+			isSoundPlaying = NO;
+			[self checkSoundQueue];
 		});
-		i++;
+		
 	}
-	
 }
 
 #pragma mark - Location
@@ -355,7 +616,7 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 			
 			/////
 			
-			[[API sharedInstance] playSounds:@[@"speech_zoom_acquiring", @"speech_zoom_lockon", @"speech_zoom_downloading"]];
+			[[API sharedInstance] playSounds:@[@"SPEECH_ZOOM_ACQUIRING", @"SPEECH_ZOOM_LOCKON", @"SPEECH_ZOOM_DOWNLOADING"]];
 			
 //			[[SoundManager sharedManager] playSound:@"Sound/speech_zoom_acquiring.aif"];
 //			
@@ -378,605 +639,6 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 
 }
 
-#pragma mark - Cells
-
-- (NSArray *)cellsAsHex {
-	
-	NSSet *cellsSet = [NSSet setWithObjects:
-	
-					   // Jablonec
-					   
-//					   @"470ecad230000000",
-//					   @"470ecad030000000",
-//					   @"470ecad130000000",
-//					   @"470ecad210000000",
-//					   @"470ecad010000000",
-//					   @"470ecad110000000",
-//					   @"470ecad0f0000000",
-//					   @"470ecad1f0000000",
-//					   @"470ecad3d0000000",
-//					   @"470ecad0d0000000",
-//					   @"470ecad1d0000000",
-//					   @"470ecacfd0000000",
-//					   @"470ecad1b0000000",
-//					   @"470ecacff0000000",
-//					   @"470ecad090000000",
-//					   @"470ecacdf0000000",
-//					   @"470ecad190000000",
-//					   @"470ecadab0000000",
-//					   @"470ecace10000000",
-//					   @"470ecad070000000",
-//					   @"470ecad170000000",
-//					   @"470ecada90000000",
-//					   @"470ecace30000000",
-//					   @"470ecad050000000",
-//					   @"470ecad150000000",
-					   
-					   // Teplice
-					   
-					   @"47098e8c30000000",
-					   @"47098e8d30000000",
-					   @"47098e8cf0000000",
-					   @"47098e8df0000000",
-					   @"47098e8ef0000000",
-					   @"47098e8bf0000000",
-					   @"47098e8cb0000000",
-					   @"47098e8db0000000",
-					   @"47098e8eb0000000",
-					   @"47098e8c70000000",
-					   @"47098e8d70000000",
-					   @"47098e8e70000000",
-					   @"47098e8b70000000",
-					   @"47098e8c10000000",
-					   @"47098e8d10000000",
-					   @"47098e8e10000000",
-					   @"47098e8cd0000000",
-					   @"47098e8dd0000000",
-					   @"47098e8ed0000000",
-					   @"47098e8b90000000",
-					   @"47098e8c90000000",
-					   @"47098e8d90000000",
-					   @"47098e8e90000000",
-					   @"47098e8950000000",
-					   @"47098e8c50000000",
-					   @"47098e8d50000000",
-					   @"47098e8e50000000",
-
-//					   @"47098e8d30000000",
-//					   @"47098e8e30000000",
-//					   @"47098e9250000000",
-//					   @"47098e8d10000000",
-//					   @"47098e8e10000000",
-//					   @"47098e9270000000",
-//					   @"47098e9190000000",
-//					   @"47098e8df0000000",
-//					   @"47098e9290000000",
-//					   @"47098e8dd0000000",
-//					   @"47098e93b0000000",
-//					   @"47098e92b0000000",
-//					   @"47098e91d0000000",
-//					   @"47098e8db0000000",
-//					   @"47098e93d0000000",
-//					   @"47098e92d0000000",
-//					   @"47098e91f0000000",
-//					   @"47098e8d90000000",
-//					   @"47098e92f0000000",
-//					   @"47098e8d70000000",
-//					   @"47098e9310000000",
-//					   @"47098e8e70000000",
-//					   @"47098e9210000000",
-//					   @"47098e8d50000000",
-//					   @"47098e9230000000",
-//					   
-//					   @"47098ef750000000",
-//					   @"47098ef150000000",
-//					   @"47098ef050000000",
-//					   @"47098ef690000000",
-//					   @"47098ef390000000",
-//					   @"47098ef190000000",
-//					   @"47098ef090000000",
-//					   @"47098ef6d0000000",
-//					   @"47098ef3d0000000",
-//					   @"47098ef0d0000000",
-//					   @"47098ef710000000",
-//					   @"47098ef410000000",
-//					   @"47098ef110000000",
-//					   @"47098ef170000000",
-//					   @"47098ef470000000",
-//					   @"47098ef3b0000000",
-//					   @"47098ef1b0000000",
-//					   @"47098ef0b0000000",
-//					   @"47098ef6b0000000",
-//					   @"47098ef3f0000000",
-//					   @"47098ef0f0000000",
-//					   @"47098ef6f0000000",
-//					   @"47098ef230000000",
-//					   @"47098ef130000000",
-//					   @"47098ef730000000",
-//					   @"47098ef430000000",
-					   
-					   // Ústí
-					   
-//					   @"470984a8b0000000",
-//					   @"470984a9b0000000",
-//					   @"470984aeb0000000",
-//					   @"470984a970000000",
-//					   @"470984ae70000000",
-//					   @"470984aa30000000",
-//					   @"470984a930000000",
-//					   @"470984af30000000",
-//					   @"470984ac30000000",
-//					   @"470984abf0000000",
-//					   @"470984a8f0000000",
-//					   @"470984aef0000000",
-//					   @"470984ae90000000",
-//					   @"470984a890000000",
-//					   @"470984a990000000",
-//					   @"470984ae50000000",
-//					   @"470984af50000000",
-//					   @"470984a850000000",
-//					   @"470984a950000000",
-//					   @"470984af10000000",
-//					   @"470984ac10000000",
-//					   @"470984a910000000",
-//					   @"470984aed0000000",
-//					   @"470984add0000000",
-//					   @"470984abd0000000",
-//					   @"470984a8d0000000",
-//					   
-//					   @"470984ca90000000",
-//					   @"470984b5f0000000",
-//					   @"470984b4f0000000",
-//					   @"470984ca50000000",
-//					   @"470984b530000000",
-//					   @"470984b430000000",
-//					   @"470984ca10000000",
-//					   @"470984b670000000",
-//					   @"470984b570000000",
-//					   @"470984b470000000",
-//					   @"470984cad0000000",
-//					   @"470984b5b0000000",
-//					   @"470984b5d0000000",
-//					   @"470984b4d0000000",
-//					   @"470984cab0000000",
-//					   @"470984b610000000",
-//					   @"470984b510000000",
-//					   @"470984b410000000",
-//					   @"470984ca70000000",
-//					   @"470984b550000000",
-//					   @"470984b450000000",
-//					   @"470984ca30000000",
-//					   @"470984b690000000",
-//					   @"470984b590000000",
-//					   @"470984b490000000",
-//					   @"470984c9f0000000",
-//					   @"470984caf0000000",
-					   
-					   // Povrly
-					   
-//					   @"47099d6850000000",
-//					   @"47099d42b0000000",
-//					   @"47099d6790000000",
-//					   @"47099d6890000000",
-//					   @"47099d5d30000000",
-//					   @"47099d4270000000",
-//					   @"47099d69d0000000",
-//					   @"47099d5d70000000",
-//					   @"47099d6710000000",
-//					   @"47099d6810000000",
-//					   @"47099d5db0000000",
-//					   @"47099d42f0000000",
-//					   @"47099d67d0000000",
-//					   @"47099d4290000000",
-//					   @"47099d67b0000000",
-//					   @"47099d6870000000",
-//					   @"47099d5cd0000000",
-//					   @"47099d6770000000",
-//					   @"47099d69b0000000",
-//					   @"47099d5d10000000",
-//					   @"47099d6630000000",
-//					   @"47099d5d50000000",
-//					   @"47099d42d0000000",
-//					   @"47099d67f0000000",
-//					   @"47099d6830000000",
-//					   @"47099d5d90000000",
-					   
-					   // Děčín
-					   
-//					   @"47099fcf90000000",
-//					   @"47099fce90000000",
-//					   @"47099fd1f0000000",
-//					   @"47099fcfb0000000",
-//					   @"47099fd1d0000000",
-//					   @"47099fd230000000",
-//					   @"47099fce50000000",
-//					   @"47099fd030000000",
-//					   @"47099fd210000000",
-//					   @"47099fcf70000000",
-//					   @"47099fce70000000",
-//					   @"47099fd010000000",
-//					   @"47099fcf10000000",
-//					   @"47099fce10000000",
-//					   @"47099fcf30000000",
-//					   @"47099fce30000000",
-//					   @"47099fd050000000",
-//					   @"47099fcfd0000000",
-//					   @"47099fced0000000",
-//					   @"47099fcdd0000000",
-//					   @"47099fd1b0000000",
-//					   @"47099fcff0000000",
-//					   @"47099fcef0000000",
-//					   @"47099fcdf0000000",
-//					   @"47099fd190000000",
-//					   
-//					   @"47099fdf10000000",
-//					   @"47099fdc10000000",
-//					   @"47099fd930000000",
-//					   @"47097561f0000000",
-//					   @"47099fdf30000000",
-//					   @"47099fd910000000",
-//					   @"47097561d0000000",
-//					   @"47099fded0000000",
-//					   @"47099fdbf0000000",
-//					   @"47099fd8f0000000",
-//					   @"47099fdef0000000",
-//					   @"4709756210000000",
-//					   @"47099fd8d0000000",
-//					   @"47099fde90000000",
-//					   @"4709756270000000",
-//					   @"47099fd8b0000000",
-//					   @"47099fd9b0000000",
-//					   @"47099fdeb0000000",
-//					   @"47099fd890000000",
-//					   @"47099fdf50000000",
-//					   @"47099fd870000000",
-//					   @"47099fd970000000",
-//					   @"47099fdf70000000",
-//					   @"47099fd850000000",
-//					   @"47099fd950000000",
-					   
-					   // Jílové
-					   
-//					   @"47099ec930000000",
-//					   @"47099ecc10000000",
-//					   @"47099ec830000000",
-//					   @"47099eca30000000",
-//					   @"47099ec910000000",
-//					   @"47099ecb10000000",
-//					   @"47099eca10000000",
-//					   @"47099ec9f0000000",
-//					   @"47099ec8f0000000",
-//					   @"47099ecbf0000000",
-//					   @"47099eced0000000",
-//					   @"47099ec9d0000000",
-//					   @"47099ec8d0000000",
-//					   @"47099ecbd0000000",
-//					   @"47099ec9b0000000",
-//					   @"47099ecbb0000000",
-//					   @"47099ec990000000",
-//					   @"47099ecb90000000",
-//					   @"47099eceb0000000",
-//					   @"47099ec970000000",
-//					   @"47099ecb70000000",
-//					   @"47099ec950000000",
-//					   @"47099ecc70000000",
-//					   @"47099ec850000000",
-//						@"47099eca50000000",
-					   
-					   // Praha
-					   
-//						@"470b948d90000000",
-//						@"470b9492d0000000",
-//						@"470b948d50000000",
-//						@"470b948c50000000",
-//						@"470b949210000000",
-//						@"470b949310000000",
-//						@"470b94ed30000000",
-//						@"470b948e10000000",
-//						@"470b948d10000000",
-//						@"470b949250000000",
-//						@"470b948dd0000000",
-//						@"470b949290000000",
-//						@"470b94f2b0000000",
-//						@"470b9492f0000000",
-//						@"470b94f2d0000000",
-//						@"470b9491f0000000",
-//						@"470b948db0000000",
-//						@"470b949230000000",
-//						@"470b94ed50000000",
-//						@"470b948e70000000",
-//						@"470b948d70000000",
-//						@"470b949270000000",
-//						@"470b948d30000000",
-//						@"470b948c30000000",
-//						@"470b9492b0000000",
-//						@"470b948df0000000",
-//						@"470b948cf0000000",
-					   
-					   // New York
-					   
-//					   @"89c25a1750000000",
-//					   @"89c25a1050000000",
-//					   @"89c25a1910000000",
-//					   @"89c25a1a10000000",
-//					   @"89c25a1710000000",
-//					   @"89c25a1850000000",
-//					   @"89c25a1110000000",
-//					   @"89c25a1a50000000",
-//					   @"89c25a16d0000000",
-//					   @"89c25a10d0000000",
-//					   @"89c25a1990000000",
-//					   @"89c25a1a90000000",
-//					   @"89c25a1790000000",
-//					   @"89c25a1090000000",
-//					   @"89c25a19d0000000",
-//					   @"89c25a1bd0000000",
-//					   @"89c25a1830000000",
-//					   @"89c25a1070000000",
-//					   @"89c25a1a30000000",
-//					   @"89c25a1770000000",
-//					   @"89c25a1970000000",
-//					   @"89c25a1130000000",
-//					   @"89c25a1a70000000",
-//					   @"89c25a1730000000",
-//					   @"89c25a10f0000000",
-//					   @"89c25a19b0000000",
-//					   @"89c25a10b0000000",
-//					   @"89c25a19f0000000",
-//					   @"89c25a17b0000000",
-
-					   // Almelo, Netherlands
-
-//					   @"47b8063a70000000",
-//					   @"47b8063b70000000",
-//					   @"47b8062ff0000000",
-//					   @"47b8062530000000",
-//					   @"47b8063ab0000000",
-//					   @"47b8063bb0000000",
-//					   @"47b8063070000000",
-//					   @"47b8063cb0000000",
-//					   @"47b80624f0000000",
-//					   @"47b8063af0000000",
-//					   @"47b80624b0000000",
-//					   @"47b8063b30000000",
-//					   @"47b8062570000000",
-//					   @"47b8062510000000",
-//					   @"47b8063a50000000",
-//					   @"47b8063b50000000",
-//					   @"47b8063090000000",
-//					   @"47b8063c90000000",
-//					   @"47b80624d0000000",
-//					   @"47b8063a90000000",
-//					   @"47b8063b90000000",
-//					   @"47b8062490000000",
-//					   @"47b8063ad0000000",
-//					   @"47b8063010000000",
-//					   @"47b8062550000000",
-//					   @"47b8062350000000",
-//					   @"47b8063b10000000",
-//					   @"47b80630b0000000",
-//					   @"47b8063970000000",
-//					   @"47b8063c70000000",
-//					   @"47b8063bf0000000",
-//					   @"47b80639f0000000",
-//					   @"47b8063a30000000",
-//					   @"47b80630f0000000",
-//					   @"47b8063750000000",
-//					   @"47b8063990000000",
-//					   @"47b8063bd0000000",
-//					   @"47b8063a10000000",
-//					   @"47b8062330000000",
-//					   @"47b8063d70000000",
-//					   @"47b80622f0000000",
-//					   @"47b8063db0000000",
-//					   @"47b80622b0000000",
-//					   @"47b8063cf0000000",
-//					   @"47b8062370000000",
-//					   @"47b80617d0000000",
-//					   @"47b8061810000000",
-//					   @"47b8063d30000000",
-//					   @"47b8063c50000000",
-//					   @"47b8063d50000000",
-//					   @"47b8062310000000",
-//					   @"47b8063d90000000",
-//					   @"47b80622d0000000",
-//					   @"47b8063cd0000000",
-//					   @"47b8062290000000",
-//					   @"47b8063d10000000",
-//					   @"47b80617f0000000",
-//					   @"47b8087e10000000",
-//					   @"47b80886b0000000",
-//					   @"47b80887b0000000",
-//					   @"47b80880b0000000",
-//					   @"47b8088770000000",
-//					   @"47b8087dd0000000",
-//					   @"47b8088170000000",
-//					   @"47b8088730000000",
-//					   @"47b8087d90000000",
-//					   @"47b8088130000000",
-//					   @"47b8087e50000000",
-//					   @"47b80886f0000000",
-//					   @"47b80880f0000000",
-//					   @"47b8088090000000",
-//					   @"47b8087e30000000",
-//					   @"47b8088690000000",
-//					   @"47b8088790000000",
-//					   @"47b8088150000000",
-//					   @"47b8088750000000",
-//					   @"47b8087df0000000",
-//					   @"47b8088110000000",
-//					   @"47b8088710000000",
-//					   @"47b8087db0000000",
-//					   @"47b80880d0000000",
-//					   @"47b8087e70000000",
-//					   @"47b80886d0000000",
-//					   @"47b807d1d0000000",
-//					   @"47b807ce90000000",
-//					   @"47b807cd90000000",
-//					   @"47b807d210000000",
-//					   @"47b807ce50000000",
-//					   @"47b807cc50000000",
-//					   @"47b807ce10000000",
-//					   @"47b807cf10000000",
-//					   @"47b807cc10000000",
-//					   @"47b807cd10000000",
-//					   @"47b807ced0000000",
-//					   @"47b807cfd0000000",
-//					   @"47b807cdd0000000",
-//					   @"47b807ceb0000000",
-//					   @"47b807cfb0000000",
-//					   @"47b807cdb0000000",
-//					   @"47b807d1f0000000",
-//					   @"47b807ce70000000",
-//					   @"47b807cc70000000",
-//					   @"47b807cd70000000",
-//					   @"47b807ce30000000",
-//					   @"47b807cf30000000",
-//					   @"47b807cc30000000",
-//					   @"47b807cef0000000",
-//					   @"47b807ccf0000000",
-//					   @"47b807cdf0000000",
-//					   @"47b807f7f0000000",
-//					   @"47b807f830000000",
-//					   @"47c7f80790000000",
-//					   @"47b807f9f0000000",
-//					   @"47b807f8f0000000",
-//					   @"47b807f770000000",
-//					   @"47b807f9b0000000",
-//					   @"47c7f80710000000",
-//					   @"47c7f80810000000",
-//					   @"47b807f7b0000000",
-//					   @"47b807f970000000",
-//					   @"47b807f870000000",
-//					   @"47c7f807d0000000",
-//					   @"47b807f910000000",
-//					   @"47b807f810000000",
-//					   @"47c7f807b0000000",
-//					   @"47c7f80870000000",
-//					   @"47b807f7d0000000",
-//					   @"47b807f9d0000000",
-//					   @"47c7f80770000000",
-//					   @"47b807f990000000",
-//					   @"47b807f890000000",
-//					   @"47b807f750000000",
-//					   @"47b807f850000000",
-//					   @"47c7f807f0000000",
-//					   @"47c7f80830000000",
-//					   @"47b807f790000000",
-//					   @"47b807e570000000",
-//					   @"47b807fb30000000",
-//					   @"47b807fa30000000",
-//					   @"47b807e4b0000000",
-//					   @"47b807fbf0000000",
-//					   @"47b807faf0000000",
-//					   @"47b807e4f0000000",
-//					   @"47b807f070000000",
-//					   @"47b807fbb0000000",
-//					   @"47b807fab0000000",
-//					   @"47b807e530000000",
-//					   @"47b807fb70000000",
-//					   @"47b807fa70000000",
-//					   @"47b807fb10000000",
-//					   @"47b807fa10000000",
-//					   @"47b807e550000000",
-//					   @"47b807f010000000",
-//					   @"47b807fbd0000000",
-//					   @"47b807fad0000000",
-//					   @"47b807e490000000",
-//					   @"47b807fb90000000",
-//					   @"47b807fa90000000",
-//					   @"47b807e4d0000000",
-//					   @"47b807fb50000000",
-//					   @"47b807fa50000000",
-//					   @"47b807e510000000",
-//					   @"47c7f80390000000",
-//					   @"47c7f80590000000",
-//					   @"47c7f80490000000",
-//					   @"47c7f80690000000",
-//					   @"47c7f80150000000",
-//					   @"47c7f80450000000",
-//					   @"47c7f80650000000",
-//					   @"47c7f80510000000",
-//					   @"47c7f80410000000",
-//					   @"47c7f80610000000",
-//					   @"47c7f805d0000000",
-//					   @"47c7f804d0000000",
-//					   @"47c7f806d0000000",
-//					   @"47c7f805b0000000",
-//					   @"47c7f806b0000000",
-//					   @"47c7f80570000000",
-//					   @"47c7f80470000000",
-//					   @"47c7f80670000000",
-//					   @"47c7f80530000000",
-//					   @"47c7f80430000000",
-//					   @"47c7f80630000000",
-//					   @"47c7f805f0000000",
-//					   @"47c7f804f0000000",
-//					   @"47c7f806f0000000",
-//					   @"47c7f803f0000000",
-//					   @"47c7f87af0000000",
-//					   @"47c7f879f0000000",
-//					   @"47c7f87730000000",
-//					   @"47c7f87a30000000",
-//					   @"47c7f870f0000000",
-//					   @"47c7f87a70000000",
-//					   @"47c7f870b0000000",
-//					   @"47c7f87970000000",
-//					   @"47c7f87ab0000000",
-//					   @"47c7f87bb0000000",
-//					   @"47c7f87070000000",
-//					   @"47c7f879b0000000",
-//					   @"47c7f87770000000",
-//					   @"47c7f87ad0000000",
-//					   @"47c7f87bd0000000",
-//					   @"47c7f87010000000",
-//					   @"47c7f879d0000000",
-//					   @"47c7f87a10000000",
-//					   @"47c7f87b10000000",
-//					   @"47c7f870d0000000",
-//					   @"47c7f87910000000",
-//					   @"47c7f87a50000000",
-//					   @"47c7f87090000000",
-//					   @"47c7f87750000000",
-//					   @"47c7f87a90000000",
-//					   @"47c7f87050000000",
-//					   @"47c7f87990000000",
-//					   @"47b8078c90000000",
-//					   @"47b8078a90000000",
-//					   @"47b8078b90000000",
-//					   @"47b807f530000000",
-//					   @"47b8078c50000000",
-//					   @"47b8078a50000000",
-//					   @"47b8078b50000000",
-//					   @"47b807f330000000",
-//					   @"47b8078c10000000",
-//					   @"47b8078b10000000",
-//					   @"47b807f4b0000000",
-//					   @"47b8078cd0000000",
-//					   @"47b8078ad0000000",
-//					   @"47b8078bd0000000",
-//					   @"47b8078ab0000000",
-//					   @"47b8078bb0000000",
-//					   @"47b807f4d0000000",
-//					   @"47b8078cb0000000",
-//					   @"47b8078a70000000",
-//					   @"47b8078b70000000",
-//					   @"47b8078c70000000",
-//					   @"47b8078a30000000",
-//					   @"47b8078b30000000",
-//					   @"47b807f350000000",
-//					   @"47b8078af0000000",
-//					   @"47b8078bf0000000",
-//					   @"47b8078cf0000000",
-
-					   nil
-					   
-	];
-	
-	return [cellsSet allObjects];
-	
-}
-
 #pragma mark - API
 
 - (void)getInventoryWithCompletionHandler:(void (^)(void))handler {
@@ -993,156 +655,33 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 
 - (void)getObjectsWithCompletionHandler:(void (^)(void))handler {
 
+	[[DB sharedInstance] removeAllMapData];
 	[[DB sharedInstance] removeAllEnergyGlobs];
-
-	NSArray *cellsAsHex = [self cellsAsHex];
+	
+	NSArray *cellsAsHex = [[S2Geometry sharedInstance] cellsForMapView:[AppDelegate instance].mapView];
 
 	NSMutableArray *dates = [NSMutableArray arrayWithCapacity:cellsAsHex.count];
 	for (int i = 0; i < cellsAsHex.count; i++) {
 		[dates addObject:@0];
 	}
-
+	
 	NSDictionary *dict = @{
-	  @"playerLocation": [self currentE6Location],
-	  @"knobSyncTimestamp": @(0),
-	  //@"energyGlobGuids": @[],
-	  @"cellsAsHex": cellsAsHex,
-	  @"dates": dates
+		@"playerLocation": [self currentE6Location],
+		@"knobSyncTimestamp": @(0),
+		//@"energyGlobGuids": @[],
+		@"cellsAsHex": cellsAsHex,
+		@"dates": dates
 	};
 
-	NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"https://m-dot-betaspike.appspot.com/rpc/gameplay/getObjectsInCells"]];
+	[self sendRequest:@"gameplay/getObjectsInCells" params:dict completionHandler:^(id responseObj) {
 
-	NSDictionary *headers = @{
-		 @"Content-Type" : @"application/json;charset=UTF-8",
-		 @"Accept-Encoding" : @"gzip",
-		 @"User-Agent" : @"Nemesis (gzip)",
-		 @"X-XsrfToken" : ((self.xsrfToken) ? (self.xsrfToken) : @""),
-		 @"Host" : @"m-dot-betaspike.appspot.com",
-		 @"Connection" : @"Keep-Alive",
-		 @"Cookie" : [NSString stringWithFormat:@"SACSID=%@", ((self.SACSID) ? (self.SACSID) : @"")],
-	};
+		//NSLog(@"getObjectsInCells responseObj: %@", responseObj);
 
-	[request setAllHTTPHeaderFields:headers];
-	[request setHTTPMethod:@"POST"];
-	[request setHTTPBody:[NSJSONSerialization dataWithJSONObject:@{@"params": dict} options:0 error:nil]];
-
-	[NSURLConnection sendAsynchronousRequest:request queue:self.networkQueue completionHandler:^(NSURLResponse *response, NSData *data, NSError *error) {
-
-		if (error) { NSLog(@"NSURLConnection error: %@", error); }
-
-		NSError *jsonParseError;
-		id responseObj;
-		if (data) {
-			responseObj = [NSJSONSerialization JSONObjectWithData:data options:0 error:&jsonParseError];
-		}
-		if (jsonParseError) {
-			NSLog(@"jsonParseError: %@", jsonParseError);
-			NSLog(@"text response: %@", [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
-		}
-
-		if (responseObj[@"gameBasket"][@"energyGlobGuids"]) {
-			dispatch_async(dispatch_get_main_queue(), ^{
-				[self processEnergyGlobGuids:responseObj[@"gameBasket"][@"energyGlobGuids"]];
-			});
-		}
-
-		handler();
+		dispatch_async(dispatch_get_main_queue(), ^{
+			handler();
+		});
 		
 	}];
-
-	return;
-
-//	NSString *qk = @"0120212211103";
-//	
-//	CGPoint nePoint = CGPointMake(mapView.bounds.origin.x + mapView.bounds.size.width, mapView.bounds.origin.y);
-//	CGPoint swPoint = CGPointMake((mapView.bounds.origin.x), (mapView.bounds.origin.y + mapView.bounds.size.height));
-//	
-//	CLLocationCoordinate2D neCoord = [mapView convertPoint:nePoint toCoordinateFromView:mapView];
-//	CLLocationCoordinate2D swCoord = [mapView convertPoint:swPoint toCoordinateFromView:mapView];
-//	
-//	//NSLog(@"NE Lat: %lld Long: %lld", neLat, neLong);
-//	//NSLog(@"SW Lat: %lld Long: %lld", swLat, swLong);
-//	
-//	NSDictionary *dict = @{
-//	@"minLevelOfDetail": @(-1),
-//	@"boundsParamsList": @[
-//	@{
-//	@"id": qk,
-//	@"qk": qk,
-//	@"minLatE6": @(neCoord.latitude*1E6),
-//	@"minLngE6": @(neCoord.longitude*1E6),
-//	@"maxLatE6": @(swCoord.latitude*1E6),
-//	@"maxLngE6": @(swCoord.longitude*1E6)
-//	}
-//	]
-//	};
-//	
-//	[NSURLConnection sendAsynchronousRequest:[self requestWithMethod:@"dashboard.getThinnedEntitiesV2" customDictionary:dict] queue:_queue completionHandler:^(NSURLResponse *response, NSData *data, NSError *error) {
-//		
-//		NSMutableArray *toRemove = [mapView.annotations mutableCopy];
-//		[toRemove removeObjectIdenticalTo:mapView.userLocation];
-//		[mapView removeAnnotations:toRemove];
-//		
-//		id responseObj = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
-//		//NSLog(@"objects response: %@", responseObj);
-//		
-//		NSArray *gameEntities = responseObj[@"result"][@"map"][qk][@"gameEntities"];
-//		for (NSArray *gameEntity in gameEntities) {
-//			NSDictionary *loc = gameEntity[2][@"locationE6"];
-//			if (loc) {
-//				
-//				CLLocationDegrees lat = [loc[@"latE6"] longLongValue]/1E6;
-//				CLLocationDegrees lng = [loc[@"lngE6"] longLongValue]/1E6;
-//				
-//				MKPointAnnotation *portal = [MKPointAnnotation alloc];
-//				[portal setCoordinate:CLLocationCoordinate2DMake(lat, lng)];
-//				[portal setTitle:[NSString stringWithFormat:@"%@", gameEntity[1]]];
-//				[mapView addAnnotation:portal];
-//				
-//			}
-//		}
-//
-//	}];
-	
-//	[[DB sharedInstance] removeAllPortals];
-//	[[DB sharedInstance] removeAllEnergyGlobs];
-//	
-//	NSArray *cellsAsHex = [self cellsAsHex];
-//
-//	NSMutableArray *dates = [NSMutableArray arrayWithCapacity:cellsAsHex.count];
-//	for (int i = 0; i < cellsAsHex.count; i++) {
-//		[dates addObject:@0];
-//	}
-//	
-//	NSDictionary *dict = @{
-//		@"playerLocation": [self currentE6Location],
-//		@"knobSyncTimestamp": @(0),
-//		//@"energyGlobGuids": @[],
-//		@"cellsAsHex": cellsAsHex,
-//		@"dates": dates
-//	};
-//	
-//	//NSLog(@"dict energyGlobGuids count: %d", [dict[@"energyGlobGuids"] count]);
-//	
-////	NSDictionary *dict = @{
-////	@"playerLocation": @"0304b588,00d2f0b1",
-////	@"knobSyncTimestamp": @(0), //(int)([[NSDate date] timeIntervalSince1970])
-////	@"energyGlobGuids": @[],
-////	@"cellsAsHex": @[
-////	@"AEEE89D32301",
-////	],
-////	@"dates": @[@0]
-////	};
-//
-//	[self sendRequest:@"gameplay/getObjectsInCells" params:dict completionHandler:^(id responseObj) {
-//
-//		//NSLog(@"getObjectsInCells responseObj: %@", responseObj);
-//
-//		dispatch_async(dispatch_get_main_queue(), ^{
-//			handler();
-//		});
-//		
-//	}];
 
 }
 
@@ -1157,22 +696,22 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 	@"cellsAsHex": @[
 
 		 // Teplice
-//		@"4709900000000000",
-//		@"4709ec0000000000",
-//		@"4709f40000000000",
-//		@"470a1f0000000000",
-//		@"470a210000000000",
-//		@"470a270000000000",
-//		@"470a290000000000",
-//		@"470a2a4000000000",
+		@"4709900000000000",
+		@"4709ec0000000000",
+		@"4709f40000000000",
+		@"470a1f0000000000",
+		@"470a210000000000",
+		@"470a270000000000",
+		@"470a290000000000",
+		@"470a2a4000000000",
 
 		 // Almelo, Netherlands
-		@"47b7f8c000000000",
-		@"47b7ff0000000000",
-		@"47b8100000000000",
-		@"47c7f00000000000",
-		@"47c8040000000000",
-  
+//		@"47b7f8c000000000",
+//		@"47b7ff0000000000",
+//		@"47b8100000000000",
+//		@"47c7f00000000000",
+//		@"47c8040000000000",
+
 	],
 	@"minTimestampMs": @(-1),
 	@"maxTimestampMs":@(-1),
@@ -1199,10 +738,11 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 			
 			NSArray *markups = message[2][@"plext"][@"markup"];
 			BOOL isMessage = NO;
+			int start = 0;
 			for (NSArray *markup in markups) {
 				//NSLog(@"%@: %@", markup[0], markup[1][@"plain"]);
 				
-				NSRange range = [str rangeOfString:markup[1][@"plain"] options:0 range:NSMakeRange(0, str.length)];
+				NSRange range = [str rangeOfString:markup[1][@"plain"] options:0 range:NSMakeRange(start, str.length-start)];
 				
 				if ([markup[0] isEqualToString:@"PLAYER"] || [markup[0] isEqualToString:@"SENDER"]) {
 					
@@ -1230,6 +770,8 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 					}
 					
 				}
+
+				start += range.length;
 			}
 
 			[messages addObject:@{@"date": date, @"message": atrstr}];
@@ -1393,7 +935,7 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 		//NSLog(@"validateNickname: %@", responseObj);
 		
 		dispatch_async(dispatch_get_main_queue(), ^{
-			handler(responseObj[@"error"]); //INVALID_CHARACTERS, TOO_SHORT, BAD_WORDS, NOT_UNIQUE
+			handler(responseObj[@"error"]); //INVALID_CHARACTERS, TOO_SHORT, BAD_WORDS, NOT_UNIQUE, CANNOT_EDIT
 		});
 		
 	}];
@@ -1634,8 +1176,8 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 }
 
 - (void)dropItemWithGuid:(NSString *)guid completionHandler:(void (^)(void))handler {
-	NSLog(@"dropItemWithGuid: %@", guid);
-	
+//	NSLog(@"dropItemWithGuid: %@", guid);
+
 	NSDictionary *dict = @{
 	@"knobSyncTimestamp": @(0),
 	@"playerLocation": [self currentE6Location],
@@ -1682,6 +1224,26 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 		
 	}];
 	
+}
+
+- (void)usePowerCube:(PowerCube *)powerCube completionHandler:(void (^)(void))handler {
+
+	NSDictionary *dict = @{
+	  @"knobSyncTimestamp": @(0),
+	  @"playerLocation": [self currentE6Location],
+	  @"itemGuid": powerCube.guid
+	};
+
+	[self sendRequest:@"gameplay/dischargePowerCube" params:dict completionHandler:^(id responseObj) {
+
+		//NSLog(@"dischargePowerCube responseObj: %@", responseObj);
+
+		dispatch_async(dispatch_get_main_queue(), ^{
+			handler();
+		});
+		
+	}];
+
 }
 
 - (void)rechargePortal:(Portal *)portal completionHandler:(void (^)(void))handler {
@@ -2118,6 +1680,21 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 	
 	if ([self.playerInfo[@"ap"] intValue] != 0 && newLevel > oldLevel) {
 		[[SoundManager sharedManager] playSound:@"Sound/sfx_player_level_up.aif"];
+	}
+
+	if ([self.playerInfo[@"energy"] intValue] != [playerEntity[2][@"playerPersonal"][@"energy"] intValue]) {
+		int xm = (int)round(([playerEntity[2][@"playerPersonal"][@"energy"] floatValue]/[API maxXmForLevel:newLevel])*100);
+
+		NSMutableArray *sounds = [NSMutableArray arrayWithCapacity:4];
+		[sounds addObject:@"SPEECH_XM_LEVELS"];
+		[sounds addObjectsFromArray:[API soundsForNumber:xm]];
+		[sounds addObject:@"SPEECH_PERCENT"];
+
+		dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC));
+		dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+			[self playSounds:sounds];
+		});
+
 	}
 	
 	self.playerInfo = @{
