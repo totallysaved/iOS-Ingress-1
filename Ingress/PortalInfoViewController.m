@@ -57,7 +57,12 @@
 - (void)refresh {
 	
 	[imageActivityIndicator stopAnimating];
-	imageView.image = [UIImage imageNamed:@"missing_image"];
+
+	if (self.portal.imageData) {
+		
+	} else {
+		self.imageView.image = [UIImage imageNamed:@"missing_image"];
+	}
 	
 //	[imageActivityIndicator startAnimating];
 //	NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:self.portal.imageURL]];
@@ -92,7 +97,7 @@
 
 	////////////////////////////
 
-	infoLabel2.text = [NSString stringWithFormat:@"Energy: 0k (0%%)\nRange: %dkm",  (int)(self.portal.range/1000)];
+	infoLabel2.text = [NSString stringWithFormat:@"Energy: %.1fk\nRange: %.1fkm", self.portal.energy/1000., self.portal.range/1000.];
 	
 //	attrStr = [[NSMutableAttributedString alloc] initWithString:str];
 //	[attrStr setAttributes:@{NSFontAttributeName: [UIFont fontWithName:@"Coda-Regular" size:15], NSForegroundColorAttributeName : [UIColor colorWithRed:.56 green:1 blue:1 alpha:1]} range:NSMakeRange(0, str.length)];
@@ -150,8 +155,20 @@
 			HUD.customView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"warning.png"]];
 			HUD.detailsLabelFont = [UIFont fontWithName:@"Coda-Regular" size:16];
 			HUD.detailsLabelText = errorStr;
-			
-			[[API sharedInstance] playSounds:@[@"speech_hacking", @"speech_unsuccessful"]];
+
+			NSMutableArray *sounds = [NSMutableArray arrayWithObjects:@"SPEECH_HACKING", @"SPEECH_UNSUCCESSFUL", nil];
+
+			if (secondsRemaining > 0) {
+				[sounds addObject:@"SPEECH_COOLDOWN_ACTIVE"];
+			}
+
+			if (secondsRemaining == 300) {
+				[sounds addObject:@"SPEECH_NUMBER_005"];
+				[sounds addObject:@"SPEECH_MINUTES"];
+				[sounds addObject:@"SPEECH_REMAINING"];
+			}
+
+			[[API sharedInstance] playSounds:sounds];
 		} else {
 			HUD.mode = MBProgressHUDModeText;
 			if (acquiredItems.count > 0) {
@@ -170,7 +187,7 @@
 			} else {
 				HUD.labelText = @"Hack acquired no items";
 				
-				[[API sharedInstance] playSounds:@[@"speech_hacking", @"speech_unsuccessful"]];
+				[[API sharedInstance] playSounds:@[@"SPEECH_HACKING", @"SPEECH_UNSUCCESSFUL"]];
 			}
 		}
 		
