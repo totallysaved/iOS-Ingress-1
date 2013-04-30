@@ -9,6 +9,10 @@
 /* Begin PBXBuildFile section */
 		FA008E17171D310500176C3D /* PowerCube.m in Sources */ = {isa = PBXBuildFile; fileRef = FA008E16171D310500176C3D /* PowerCube.m */; };
 		FA008E19171D334700176C3D /* powerCube@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FA008E18171D334700176C3D /* powerCube@2x.png */; };
+		FA0A3FE9172EC61F00BBBA3D /* XMOverlayView.m in Sources */ = {isa = PBXBuildFile; fileRef = FA0A3FE8172EC61F00BBBA3D /* XMOverlayView.m */; };
+		FA0A3FEA172ED90D00BBBA3D /* Sound in Resources */ = {isa = PBXBuildFile; fileRef = FA7AC9D116D0116800505404 /* Sound */; };
+		FA0A4012172EF78700BBBA3D /* SDWebImage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FA0A4011172EF78600BBBA3D /* SDWebImage.framework */; };
+		FA0A4014172EF79600BBBA3D /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FA0A4013172EF79500BBBA3D /* ImageIO.framework */; };
 		FA13CDA416A038D7003C9962 /* CommTableViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = FA13CDA316A038D7003C9962 /* CommTableViewCell.m */; };
 		FA143F7A16D526450007330F /* DeployedResonatorView.m in Sources */ = {isa = PBXBuildFile; fileRef = FA143F7916D526450007330F /* DeployedResonatorView.m */; };
 		FA1739F716A827660004EE10 /* resonator@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FA1739F616A827660004EE10 /* resonator@2x.png */; };
@@ -105,9 +109,8 @@
 		FA6EF960172D2D360004905F /* progressImage-aliens@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FA6EF95E172D2D350004905F /* progressImage-aliens@2x.png */; };
 		FA6EF961172D2D360004905F /* progressImage-resistance@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FA6EF95F172D2D360004905F /* progressImage-resistance@2x.png */; };
 		FA779AAB16A55FC40080B62A /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FA779AAA16A55FC40080B62A /* AVFoundation.framework */; };
-		FA7AC9D216D0116800505404 /* Sound in Resources */ = {isa = PBXBuildFile; fileRef = FA7AC9D116D0116800505404 /* Sound */; };
 		FA7AC9D816D14C5400505404 /* SoundManager.m in Sources */ = {isa = PBXBuildFile; fileRef = FA7AC9D716D14C5400505404 /* SoundManager.m */; };
-		FA7BCEDE16B535B0007636C8 /* MKCircle+DeployedResonator.m in Sources */ = {isa = PBXBuildFile; fileRef = FA7BCEDD16B535B0007636C8 /* MKCircle+DeployedResonator.m */; };
+		FA7BCEDE16B535B0007636C8 /* MKCircle+Ingress.m in Sources */ = {isa = PBXBuildFile; fileRef = FA7BCEDD16B535B0007636C8 /* MKCircle+Ingress.m */; };
 		FA7E1AB016AC6D3900C8F949 /* PortalOverlayView.m in Sources */ = {isa = PBXBuildFile; fileRef = FA7E1AAF16AC6D3900C8F949 /* PortalOverlayView.m */; };
 		FA7E1AB516AC6DB300C8F949 /* portal_aliens@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FA7E1AB216AC6DB300C8F949 /* portal_aliens@2x.png */; };
 		FA7E1AB616AC6DB300C8F949 /* portal_neutral@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FA7E1AB316AC6DB300C8F949 /* portal_neutral@2x.png */; };
@@ -254,6 +257,10 @@
 		FA008E15171D310500176C3D /* PowerCube.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PowerCube.h; path = CoreData/PowerCube.h; sourceTree = "<group>"; };
 		FA008E16171D310500176C3D /* PowerCube.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = PowerCube.m; path = CoreData/PowerCube.m; sourceTree = "<group>"; };
 		FA008E18171D334700176C3D /* powerCube@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "powerCube@2x.png"; sourceTree = "<group>"; };
+		FA0A3FE7172EC61F00BBBA3D /* XMOverlayView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = XMOverlayView.h; sourceTree = "<group>"; };
+		FA0A3FE8172EC61F00BBBA3D /* XMOverlayView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = XMOverlayView.m; sourceTree = "<group>"; };
+		FA0A4011172EF78600BBBA3D /* SDWebImage.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SDWebImage.framework; sourceTree = "<group>"; };
+		FA0A4013172EF79500BBBA3D /* ImageIO.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ImageIO.framework; path = System/Library/Frameworks/ImageIO.framework; sourceTree = SDKROOT; };
 		FA13CDA216A038D7003C9962 /* CommTableViewCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CommTableViewCell.h; sourceTree = "<group>"; };
 		FA13CDA316A038D7003C9962 /* CommTableViewCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CommTableViewCell.m; sourceTree = "<group>"; };
 		FA143F7816D526440007330F /* DeployedResonatorView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DeployedResonatorView.h; sourceTree = "<group>"; };
@@ -379,8 +386,8 @@
 		FA7AC9D116D0116800505404 /* Sound */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Sound; path = Ingress/Sound; sourceTree = "<group>"; };
 		FA7AC9D616D14C5400505404 /* SoundManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SoundManager.h; sourceTree = "<group>"; };
 		FA7AC9D716D14C5400505404 /* SoundManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SoundManager.m; sourceTree = "<group>"; };
-		FA7BCEDC16B535B0007636C8 /* MKCircle+DeployedResonator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "MKCircle+DeployedResonator.h"; sourceTree = "<group>"; };
-		FA7BCEDD16B535B0007636C8 /* MKCircle+DeployedResonator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "MKCircle+DeployedResonator.m"; sourceTree = "<group>"; };
+		FA7BCEDC16B535B0007636C8 /* MKCircle+Ingress.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "MKCircle+Ingress.h"; sourceTree = "<group>"; };
+		FA7BCEDD16B535B0007636C8 /* MKCircle+Ingress.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "MKCircle+Ingress.m"; sourceTree = "<group>"; };
 		FA7BCEE016B5B351007636C8 /* resonatorResourceUnit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = resonatorResourceUnit.h; path = Ingress/3D/resonatorResourceUnit.h; sourceTree = "<group>"; };
 		FA7BCEE116B5B351007636C8 /* sphere.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = sphere.h; path = Ingress/3D/sphere.h; sourceTree = "<group>"; };
 		FA7E1AAE16AC6D3900C8F949 /* PortalOverlayView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PortalOverlayView.h; sourceTree = "<group>"; };
@@ -721,6 +728,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FAC475C4172DB3E900AAFFC0 /* libssl.a in Frameworks */,
 				FAF0E33716E3BA9D005B8147 /* CoreMedia.framework in Frameworks */,
 				FAE797DC16B49CDA00A57316 /* OpenGLES.framework in Frameworks */,
 				FAE797D716B49BFB00A57316 /* GLKit.framework in Frameworks */,
@@ -737,7 +745,8 @@
 				FAEA583C169C7E7500E2F502 /* UIKit.framework in Frameworks */,
 				FAEA583E169C7E7500E2F502 /* Foundation.framework in Frameworks */,
 				FAEA5840169C7E7500E2F502 /* CoreGraphics.framework in Frameworks */,
-				FAC475C4172DB3E900AAFFC0 /* libssl.a in Frameworks */,
+				FA0A4014172EF79600BBBA3D /* ImageIO.framework in Frameworks */,
+				FA0A4012172EF78700BBBA3D /* SDWebImage.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1236,14 +1245,16 @@
 		FAC23E4316B2D0C7000C17DD /* Overlay Views */ = {
 			isa = PBXGroup;
 			children = (
+				FA0A3FE7172EC61F00BBBA3D /* XMOverlayView.h */,
+				FA0A3FE8172EC61F00BBBA3D /* XMOverlayView.m */,
 				FA7E1AAE16AC6D3900C8F949 /* PortalOverlayView.h */,
 				FA7E1AAF16AC6D3900C8F949 /* PortalOverlayView.m */,
 				FAC23E4D16B2E3A8000C17DD /* MKPolyline+PortalLink.h */,
 				FAC23E4E16B2E3A8000C17DD /* MKPolyline+PortalLink.m */,
 				FAC23E5016B2E5B3000C17DD /* MKPolygon+ControlField.h */,
 				FAC23E5116B2E5B3000C17DD /* MKPolygon+ControlField.m */,
-				FA7BCEDC16B535B0007636C8 /* MKCircle+DeployedResonator.h */,
-				FA7BCEDD16B535B0007636C8 /* MKCircle+DeployedResonator.m */,
+				FA7BCEDC16B535B0007636C8 /* MKCircle+Ingress.h */,
+				FA7BCEDD16B535B0007636C8 /* MKCircle+Ingress.m */,
 				FA8C24DB16B3D251000C8738 /* ColorOverlay.h */,
 				FA8C24DC16B3D251000C8738 /* ColorOverlay.m */,
 				FA8C24DE16B3D25D000C8738 /* ColorOverlayView.h */,
@@ -1645,6 +1656,8 @@
 		FAEA583A169C7E7500E2F502 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				FA0A4013172EF79500BBBA3D /* ImageIO.framework */,
+				FA0A4011172EF78600BBBA3D /* SDWebImage.framework */,
 				FAF0E33616E3BA9D005B8147 /* CoreMedia.framework */,
 				FAE797DB16B49CDA00A57316 /* OpenGLES.framework */,
 				FAE797D616B49BFB00A57316 /* GLKit.framework */,
@@ -1790,7 +1803,7 @@
 				FAEA5852169C7E7500E2F502 /* Default-568h@2x.png in Resources */,
 				FAEA5855169C7E7500E2F502 /* MainStoryboard_iPhone.storyboard in Resources */,
 				FAEA5858169C7E7500E2F502 /* MainStoryboard_iPad.storyboard in Resources */,
-				FA7AC9D216D0116800505404 /* Sound in Resources */,
+				FA0A3FEA172ED90D00BBBA3D /* Sound in Resources */,
 				FAEA5869169C842D00E2F502 /* Icon-57.png in Resources */,
 				FAEA586B169C844400E2F502 /* Icon-72.png in Resources */,
 				FAEA586D169C858400E2F502 /* Icon-114.png in Resources */,
@@ -1975,7 +1988,7 @@
 				FA8C24E316B3DB64000C8738 /* CustomMapView.m in Sources */,
 				FAE797CB16B4873C00A57316 /* UIImage+ColorReplace.m in Sources */,
 				FAE797DA16B49C1E00A57316 /* GLViewController.m in Sources */,
-				FA7BCEDE16B535B0007636C8 /* MKCircle+DeployedResonator.m in Sources */,
+				FA7BCEDE16B535B0007636C8 /* MKCircle+Ingress.m in Sources */,
 				FACF89E116BBFD410071A03D /* GUIButton.m in Sources */,
 				FA92A0B216C2E13C00E6E3AE /* MKMapView+ZoomLevel.m in Sources */,
 				FA7AC9D816D14C5400505404 /* SoundManager.m in Sources */,
@@ -2016,6 +2029,7 @@
 				FAC47515172DB2A000AAFFC0 /* s2regionintersection.cc in Sources */,
 				FAC47516172DB2A000AAFFC0 /* s2regionunion.cc in Sources */,
 				FAC475C7172DB8B100AAFFC0 /* S2Geometry.mm in Sources */,
+				FA0A3FE9172EC61F00BBBA3D /* XMOverlayView.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2106,6 +2120,10 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)\"",
+				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "Ingress/Ingress-Prefix.pch";
 				HEADER_SEARCH_PATHS = (
@@ -2119,7 +2137,8 @@
 					"\"$(SRCROOT)/s2-geometry\"",
 					"\"$(SRCROOT)/openssl/lib\"",
 				);
-				ONLY_ACTIVE_ARCH = YES;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
 				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
@@ -2133,6 +2152,10 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)\"",
+				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "Ingress/Ingress-Prefix.pch";
 				HEADER_SEARCH_PATHS = (
@@ -2146,7 +2169,8 @@
 					"\"$(SRCROOT)/s2-geometry\"",
 					"\"$(SRCROOT)/openssl/lib\"",
 				);
-				ONLY_ACTIVE_ARCH = YES;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
 				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";

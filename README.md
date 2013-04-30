@@ -1,16 +1,19 @@
 iOS Ingress
 ===========
 
-Google's AR Game Ingress port for iOS
+Fully playable Google's AR Game Ingress port for iOS
+
+Newest IPA can be downloaded here: https://www.dropbox.com/s/q28f2bj2bgt2vxj/Ingress.ipa. You need to be developer or have jailbreak to install it.
 
 TODO
 ----
 
 - choosing faction (+GUI)
 - better XM collecting
-- speed and memory optimalization
-- GUI improvements (3.5" screen)
+- speed and memory optimalizations
+- GUI improvements (mainly 3.5" screen optimalization)
 - linking portals
+- maybe 3D Scanner?
 
 Choosing faction
 ----------------
@@ -25,6 +28,10 @@ Choosing faction is not yet implemented, but you can choose by calling this meth
 
 Video
 -----
+
+Gameplay video
+
+http://youtu.be/Jewu0rpKrrU
 
 Video of codename creating and intro which have been recently finished
 
