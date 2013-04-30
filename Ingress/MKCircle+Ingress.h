@@ -8,8 +8,9 @@
 
 #import <MapKit/MapKit.h>
 
-@interface MKCircle (DeployedResonator)
+@interface MKCircle (Ingress)
 
 @property (nonatomic, strong) DeployedResonator *deployedResonator;
+@property (nonatomic, strong) EnergyGlob *energyGlob;
 
 @end
