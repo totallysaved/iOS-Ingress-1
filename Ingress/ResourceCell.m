@@ -34,107 +34,35 @@
 
 - (void)setItemType:(ItemType)itemType {
 	_itemType = itemType;
-	
+
+	Class objectClass = [NSManagedObject class];
 	switch (itemType) {
-		case ItemTypeResonator: {
-			
-			UILabel *label = (UILabel *)[self.contentView viewWithTag:1];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfResonatorsOfLevel:1]];
-			
-			label = (UILabel *)[self.contentView viewWithTag:2];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfResonatorsOfLevel:2]];
-			
-			label = (UILabel *)[self.contentView viewWithTag:3];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfResonatorsOfLevel:3]];
-			
-			label = (UILabel *)[self.contentView viewWithTag:4];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfResonatorsOfLevel:4]];
-			
-			label = (UILabel *)[self.contentView viewWithTag:5];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfResonatorsOfLevel:5]];
-			
-			label = (UILabel *)[self.contentView viewWithTag:6];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfResonatorsOfLevel:6]];
-			
-			label = (UILabel *)[self.contentView viewWithTag:7];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfResonatorsOfLevel:7]];
-			
-			label = (UILabel *)[self.contentView viewWithTag:8];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfResonatorsOfLevel:8]];
-			
+		case ItemTypeResonator:
+			objectClass = [Resonator class];
 			break;
+		case ItemTypeXMP:
+			objectClass = [XMP class];
+			break;
+		case ItemTypePortalShield:
+			objectClass = [Shield class];
+			break;
+		case ItemTypePowerCube:
+			objectClass = [PowerCube class];
+			break;
+	}
+
+	if (itemType == ItemTypePortalShield) {
+		for (int i = 1; i <= 3; i++) {
+			UILabel *label = (UILabel *)[self.contentView viewWithTag:i];
+			label.text = [NSString stringWithFormat:@"%d", [objectClass MR_countOfEntitiesWithPredicate:[NSPredicate predicateWithFormat:@"dropped = NO && rarity = %d", i-1]]];
 		}
-		case ItemTypeXMP: {
-			
-			UILabel *label = (UILabel *)[self.contentView viewWithTag:1];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfXMPsOfLevel:1]];
-			
-			label = (UILabel *)[self.contentView viewWithTag:2];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfXMPsOfLevel:2]];
-			
-			label = (UILabel *)[self.contentView viewWithTag:3];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfXMPsOfLevel:3]];
-			
-			label = (UILabel *)[self.contentView viewWithTag:4];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfXMPsOfLevel:4]];
-			
-			label = (UILabel *)[self.contentView viewWithTag:5];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfXMPsOfLevel:5]];
-			
-			label = (UILabel *)[self.contentView viewWithTag:6];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfXMPsOfLevel:6]];
-			
-			label = (UILabel *)[self.contentView viewWithTag:7];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfXMPsOfLevel:7]];
-			
-			label = (UILabel *)[self.contentView viewWithTag:8];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfXMPsOfLevel:8]];
-			
-			break;
-		}
-		case ItemTypePortalShield: {
-
-			UILabel *label = (UILabel *)[self.contentView viewWithTag:1];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfPortalShieldsOfRarity:PortalShieldRarityCommon]];
-			
-			label = (UILabel *)[self.contentView viewWithTag:2];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfPortalShieldsOfRarity:PortalShieldRarityRare]];
-			
-			label = (UILabel *)[self.contentView viewWithTag:3];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfPortalShieldsOfRarity:PortalShieldRarityVeryRare]];
-
-			break;
-		}
-		case ItemTypePowerCube: {
-			
-			UILabel *label = (UILabel *)[self.contentView viewWithTag:1];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfPowerCubesOfLevel:1]];
-
-			label = (UILabel *)[self.contentView viewWithTag:2];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfPowerCubesOfLevel:2]];
-
-			label = (UILabel *)[self.contentView viewWithTag:3];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfPowerCubesOfLevel:3]];
-
-			label = (UILabel *)[self.contentView viewWithTag:4];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfPowerCubesOfLevel:4]];
-
-			label = (UILabel *)[self.contentView viewWithTag:5];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfPowerCubesOfLevel:5]];
-
-			label = (UILabel *)[self.contentView viewWithTag:6];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfPowerCubesOfLevel:6]];
-
-			label = (UILabel *)[self.contentView viewWithTag:7];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfPowerCubesOfLevel:7]];
-
-			label = (UILabel *)[self.contentView viewWithTag:8];
-			label.text = [NSString stringWithFormat:@"%d", [[DB sharedInstance] numberOfPowerCubesOfLevel:8]];
-
-			break;
+	} else {
+		for (int i = 1; i <= 8; i++) {
+			UILabel *label = (UILabel *)[self.contentView viewWithTag:i];
+			label.text = [NSString stringWithFormat:@"%d", [objectClass MR_countOfEntitiesWithPredicate:[NSPredicate predicateWithFormat:@"dropped = NO && level = %d", i]]];
 		}
 	}
-	
+
 }
 
 #pragma mark - Action
@@ -159,26 +87,29 @@
 
 - (void)dropItem {
 
+	Class objectClass = [NSManagedObject class];
+	switch (self.itemType) {
+		case ItemTypeResonator:
+			objectClass = [Resonator class];
+			break;
+		case ItemTypeXMP:
+			objectClass = [XMP class];
+			break;
+		case ItemTypePortalShield:
+			objectClass = [Shield class];
+			break;
+		case ItemTypePowerCube:
+			objectClass = [PowerCube class];
+			break;
+	}
+
 	NSString *guid;
 
-	switch (self.itemType) {
-		case ItemTypeResonator: {
-			guid = [[DB sharedInstance] getRandomResonatorOfLevel:actionLevel].guid;
-			break;
-		}
-		case ItemTypeXMP: {
-			guid = [[DB sharedInstance] getRandomXMPOfLevel:actionLevel].guid;
-			break;
-		}
-		case ItemTypePortalShield: {
-			PortalShieldRarity rarity = [API shieldRarityFromInt:actionLevel];
-			guid = [[DB sharedInstance] getRandomShieldOfRarity:rarity].guid;
-			break;
-		}
-		case ItemTypePowerCube: {
-			guid = [[DB sharedInstance] getRandomPowerCubeOfLevel:actionLevel].guid;
-			break;
-		}
+	if (self.itemType == ItemTypePortalShield) {
+		PortalShieldRarity rarity = [API shieldRarityFromInt:actionLevel];
+		guid = [[objectClass MR_findFirstWithPredicate:[NSPredicate predicateWithFormat:@"dropped = NO && rarity = %d", rarity] andRetrieveAttributes:@[@"guid"]] guid];
+	} else {
+		guid = [[objectClass MR_findFirstWithPredicate:[NSPredicate predicateWithFormat:@"dropped = NO && level = %d", actionLevel] andRetrieveAttributes:@[@"guid"]] guid];
 	}
 
 	actionLevel = 0;
@@ -219,7 +150,7 @@
 
 - (void)usePowerCube {
 
-	PowerCube *powerCube = [[DB sharedInstance] getRandomPowerCubeOfLevel:actionLevel];
+	PowerCube *powerCube = [PowerCube MR_findFirstWithPredicate:[NSPredicate predicateWithFormat:@"dropped = NO && level = %d", actionLevel] andRetrieveAttributes:@[@"guid"]];
 
 	if (powerCube) {
 

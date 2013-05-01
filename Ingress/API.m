@@ -655,10 +655,14 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 
 - (void)getObjectsWithCompletionHandler:(void (^)(void))handler {
 
-	[[DB sharedInstance] removeAllMapData];
-	[[DB sharedInstance] removeAllEnergyGlobs];
-	
-	NSArray *cellsAsHex = [S2Geometry cellsForMapView:[AppDelegate instance].mapView];
+//	[[DB sharedInstance] removeAllMapData];
+
+	MKMapView *mapView = [AppDelegate instance].mapView;
+	CGPoint nePoint = CGPointMake(mapView.bounds.origin.x + mapView.bounds.size.width, mapView.bounds.origin.y);
+	CGPoint swPoint = CGPointMake((mapView.bounds.origin.x), (mapView.bounds.origin.y + mapView.bounds.size.height));
+	CLLocationCoordinate2D neCoord = [mapView convertPoint:nePoint toCoordinateFromView:mapView];
+	CLLocationCoordinate2D swCoord = [mapView convertPoint:swPoint toCoordinateFromView:mapView];
+	NSArray *cellsAsHex = [S2Geometry cellsForNeCoord:neCoord swCoord:swCoord minZoomLevel:16 maxZoomLevel:16];
 
 	NSMutableArray *dates = [NSMutableArray arrayWithCapacity:cellsAsHex.count];
 	for (int i = 0; i < cellsAsHex.count; i++) {
@@ -686,43 +690,28 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 }
 
 - (void)loadCommunicationForFactionOnly:(BOOL)factionOnly completionHandler:(void (^)(NSArray *messages))handler {
-	
 	//NSLog(@"loadCommunicationWithCompletionHandler");
 
-	//NSArray *cellsAsHex = [self cellsAsHex];
+	MKMapView *mapView = [AppDelegate instance].mapView;
+	MKCoordinateRegion region = MKCoordinateRegionMakeWithDistance(mapView.centerCoordinate, 20000, 20000);
+	CLLocationCoordinate2D neCoord, swCoord;
+	neCoord.latitude  = region.center.latitude  + (region.span.latitudeDelta  / 2.0);
+	neCoord.longitude = region.center.longitude + (region.span.longitudeDelta / 2.0);
+	swCoord.latitude  = region.center.latitude  - (region.span.latitudeDelta  / 2.0);
+	swCoord.longitude = region.center.longitude - (region.span.longitudeDelta / 2.0);
+	NSArray *cellsAsHex = [S2Geometry cellsForNeCoord:neCoord swCoord:swCoord minZoomLevel:8 maxZoomLevel:12];
 	
 	NSDictionary *dict = @{
-	//@"cellsAsHex": cellsAsHex,
-	@"cellsAsHex": @[
-
-		 // Teplice
-		@"4709900000000000",
-		@"4709ec0000000000",
-		@"4709f40000000000",
-		@"470a1f0000000000",
-		@"470a210000000000",
-		@"470a270000000000",
-		@"470a290000000000",
-		@"470a2a4000000000",
-
-		 // Almelo, Netherlands
-//		@"47b7f8c000000000",
-//		@"47b7ff0000000000",
-//		@"47b8100000000000",
-//		@"47c7f00000000000",
-//		@"47c8040000000000",
-
-	],
-	@"minTimestampMs": @(-1),
-	@"maxTimestampMs":@(-1),
-	@"desiredNumItems": @50,
-	@"factionOnly": @(factionOnly),
-	@"ascendingTimestampOrder": @NO
+		@"cellsAsHex": cellsAsHex,
+		@"minTimestampMs": @(-1),
+		@"maxTimestampMs":@(-1),
+		@"desiredNumItems": @50,
+		@"factionOnly": @(factionOnly),
+		@"ascendingTimestampOrder": @NO
 	};
 	
 	[self sendRequest:@"playerUndecorated/getPaginatedPlexts" params:dict completionHandler:^(id responseObj) {
-		
-		//NSLog(@"comm responseObj: %@", responseObj);
+		//NSLog(@"getPaginatedPlexts responseObj: %@", responseObj);
 		
 		NSMutableArray *messages = [NSMutableArray array];
 		NSArray *tmpMessages = responseObj[@"result"];
@@ -989,10 +978,10 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 - (void)hackPortal:(Portal *)portal completionHandler:(void (^)(NSString *errorStr, NSArray *acquiredItems, int secondsRemaining))handler {
 	
 	NSDictionary *dict = @{
-	@"itemGuid": portal.guid,
-	@"playerLocation": [self currentE6Location],
-	@"knobSyncTimestamp": @(0),
-	//@"energyGlobGuids": @[]
+		@"itemGuid": portal.guid,
+		@"playerLocation": [self currentE6Location],
+		@"knobSyncTimestamp": @(0),
+		//@"energyGlobGuids": @[]
 	};
 	
 	[self sendRequest:@"gameplay/collectItemsFromPortal" params:dict completionHandler:^(id responseObj) {
@@ -1288,9 +1277,14 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 	if ([params isKindOfClass:[NSDictionary class]]) {
 		
 		NSMutableDictionary *mutableParams = [params mutableCopy];
-	
+
+		NSArray *energyGlobs = [EnergyGlob MR_findAll];
+		if (energyGlobs.count > [API sharedInstance].numberOfEnergyToCollect) {
+			energyGlobs = [energyGlobs subarrayWithRange:NSMakeRange(0, [API sharedInstance].numberOfEnergyToCollect)];
+		}
+		
 		NSMutableArray *collectedEnergyGuids = [NSMutableArray array];
-		for (EnergyGlob *energyGlob in [[DB sharedInstance] getEnergyGlobs:[API sharedInstance].numberOfEnergyToCollect]) {
+		for (EnergyGlob *energyGlob in energyGlobs) {
 			[collectedEnergyGuids addObject:energyGlob.guid];
 		}
 		mutableParams[@"energyGlobGuids"] = collectedEnergyGuids;
@@ -1415,40 +1409,56 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 		//NSLog(@"resourceType: %@", resourceType);
 		
 		if ([resourceType isEqualToString:@"EMITTER_A"]) {
-			Resonator *resonator = (Resonator *)[[DB sharedInstance] getOrCreateItemWithGuid:item[0] classStr:@"Resonator"];
+			Resonator *resonator = [Resonator MR_findFirstByAttribute:@"guid" withValue:item[0]];
+			if (!resonator) { resonator = [Resonator MR_createEntity]; }
+			resonator.guid = item[0];
 			resonator.level = [item[2][@"resourceWithLevels"][@"level"] integerValue];
 		} else if ([resourceType isEqualToString:@"EMP_BURSTER"]) {
-			XMP *xmp = (XMP *)[[DB sharedInstance] getOrCreateItemWithGuid:item[0] classStr:@"XMP"];
+			XMP *xmp = [XMP MR_findFirstByAttribute:@"guid" withValue:item[0]];
+			if (!xmp) { xmp = [XMP MR_createEntity]; }
+			xmp.guid = item[0];
 			xmp.level = [item[2][@"resourceWithLevels"][@"level"] integerValue];
 		} else if ([resourceType isEqualToString:@"RES_SHIELD"]) {
-			Shield *shield = (Shield *)[[DB sharedInstance] getOrCreateItemWithGuid:item[0] classStr:@"Shield"];
+			Shield *shield = [Shield MR_findFirstByAttribute:@"guid" withValue:item[0]];
+			if (!shield) { shield = [Shield MR_createEntity]; }
+			shield.guid = item[0];
 			shield.rarity = [API shieldRarityFromString:item[2][@"modResource"][@"rarity"]];
 		} else if ([resourceType isEqualToString:@"PORTAL_LINK_KEY"]) {
-			Portal *portal = (Portal *)[[DB sharedInstance] getOrCreateItemWithGuid:item[2][@"portalCoupler"][@"portalGuid"] classStr:@"Portal"];
+			Portal *portal = [Portal MR_findFirstByAttribute:@"guid" withValue:item[2][@"portalCoupler"][@"portalGuid"]];
+			if (!portal) { portal = [Portal MR_createEntity]; }
+			portal.guid = item[2][@"portalCoupler"][@"portalGuid"];
 			portal.imageURL = item[2][@"portalCoupler"][@"portalImageUrl"];
 			portal.name = item[2][@"portalCoupler"][@"portalTitle"];
 			portal.address = item[2][@"portalCoupler"][@"portalAddress"];
 			
-			PortalKey *portalKey = (PortalKey *)[[DB sharedInstance] getOrCreateItemWithGuid:item[0] classStr:@"PortalKey"];
+			PortalKey *portalKey = [PortalKey MR_findFirstByAttribute:@"guid" withValue:item[0]];
+			if (!portalKey) { portalKey = [PortalKey MR_createEntity]; }
+			portalKey.guid = item[0];
 			portalKey.portal = portal;
+			portalKey.portalGuid = item[2][@"portalCoupler"][@"portalGuid"];
 		} else if ([resourceType isEqualToString:@"MEDIA"]) {
-			Media *media = (Media *)[[DB sharedInstance] getOrCreateItemWithGuid:item[0] classStr:@"Media"];
+			Media *media = [Media MR_findFirstByAttribute:@"guid" withValue:item[0]];
+			if (!media) { media = [Media MR_createEntity]; }
+			media.guid = item[0];
 			media.name = item[2][@"storyItem"][@"shortDescription"];
 			media.url = item[2][@"storyItem"][@"primaryUrl"];
 			media.level = [item[2][@"resourceWithLevels"][@"level"] integerValue];
 			media.imageURL = item[2][@"imageByUrl"][@"imageUrl"];
 		} else if ([resourceType isEqualToString:@"POWER_CUBE"]) {
-			PowerCube *powerCube = (PowerCube *)[[DB sharedInstance] getOrCreateItemWithGuid:item[0] classStr:@"PowerCube"];
+			PowerCube *powerCube = [PowerCube MR_findFirstByAttribute:@"guid" withValue:item[0]];
+			if (!powerCube) { powerCube = [PowerCube MR_createEntity]; }
+			powerCube.guid = item[0];
 			powerCube.level = [item[2][@"resourceWithLevels"][@"level"] integerValue];
 		} else {
 			NSLog(@"Unknown Item");
-			//Item *itemObj =
-			[[DB sharedInstance] getOrCreateItemWithGuid:item[0] classStr:@"Item"];
+			Item *itemObj = [Item MR_findFirstByAttribute:@"guid" withValue:item[0]];
+			if (!itemObj) { itemObj = [Item MR_createEntity]; }
+			itemObj.guid = item[0];
 		}
 
 	}
-	
-	[[DB sharedInstance] saveContext];
+
+	[[NSManagedObjectContext MR_defaultContext] MR_saveToPersistentStoreWithCompletion:nil];
 
 	//[[NSNotificationCenter defaultCenter] postNotificationName:@"InventoryUpdatedNotification" object:nil];
 	
@@ -1461,37 +1471,52 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 		NSDictionary *loc = gameEntity[2][@"locationE6"];
 		if (loc && gameEntity[2][@"portalV2"]) {
 
-			//Portal *portal = [[DB sharedInstance] portalWithGuid:gameEntity[0]];
-			Portal *portal = (Portal *)[[DB sharedInstance] getOrCreateItemWithGuid:gameEntity[0] classStr:@"Portal"];
+			Portal *portal = [Portal MR_findFirstByAttribute:@"guid" withValue:gameEntity[0]];
+			if (!portal) { portal = [Portal MR_createEntity]; }
+			portal.guid = gameEntity[0];
 			portal.latitude = [loc[@"latE6"] intValue]/1E6;
 			portal.longitude = [loc[@"lngE6"] intValue]/1E6;
 			portal.controllingTeam = gameEntity[2][@"controllingTeam"][@"team"];
-			portal.capturedBy = [[DB sharedInstance] userWithGuid:gameEntity[2][@"captured"][@"capturingPlayerId"] shouldCreate:YES];
 			portal.imageURL = gameEntity[2][@"imageByUrl"][@"imageUrl"];
 			portal.name = gameEntity[2][@"portalV2"][@"descriptiveText"][@"TITLE"];
 			portal.address = gameEntity[2][@"portalV2"][@"descriptiveText"][@"ADDRESS"];
 			portal.completeInfo = YES;
-			
+
+			User *creator = [User MR_findFirstByAttribute:@"guid" withValue:gameEntity[2][@"captured"][@"capturingPlayerId"]];
+			if (!creator) { creator = [User MR_createEntity]; }
+			creator.guid = gameEntity[2][@"captured"][@"capturingPlayerId"];
+			portal.capturedBy = creator;
+
 			for (int i = 0; i < 8; i++) {
 				
 				NSDictionary *resonatorDict = gameEntity[2][@"resonatorArray"][@"resonators"][i];
 
+				DeployedResonator *resonator = [DeployedResonator MR_findFirstWithPredicate:[NSPredicate predicateWithFormat:@"portal = %@ && slot = %d", portal, i]];
+
 				if ([resonatorDict isKindOfClass:[NSNull class]]) {
-					DeployedResonator *resonator = [[DB sharedInstance] deployedResonatorForPortal:portal atSlot:i shouldCreate:NO];
 					if (resonator) {
-						[[[DB sharedInstance] managedObjectContext] deleteObject:resonator];
+						[resonator MR_deleteEntity];
 					}
 				} else {
 					
 					if ([resonatorDict[@"slot"] intValue] != i) {
 						NSLog(@"%d != %d", [resonatorDict[@"slot"] intValue], i);
 					}
-					DeployedResonator *resonator = [[DB sharedInstance] deployedResonatorForPortal:portal atSlot:i shouldCreate:YES];
+					
+					if (!resonator) { resonator = [DeployedResonator MR_createEntity]; }
+					resonator.portal = portal;
+					resonator.slot = i;
 					resonator.energy = [resonatorDict[@"energyTotal"] intValue];
-					resonator.owner = [[DB sharedInstance] userWithGuid:resonatorDict[@"ownerGuid"] shouldCreate:YES];
 					resonator.distanceToPortal = [resonatorDict[@"distanceToPortal"] intValue];
 					resonator.level = [resonatorDict[@"level"] intValue];
+
+					User *owner = [User MR_findFirstByAttribute:@"guid" withValue:resonatorDict[@"ownerGuid"]];
+					if (!owner) { owner = [User MR_createEntity]; }
+					owner.guid = resonatorDict[@"ownerGuid"];
+					resonator.owner = owner;
+
 					[portal addResonatorsObject:resonator];
+					
 				}
 				
 			}
@@ -1501,20 +1526,32 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 			for (int i = 0; i < 4; i++) {
 				
 				NSDictionary *modDict = gameEntity[2][@"portalV2"][@"linkedModArray"][i];
+
+				
 				
 				if ([modDict isKindOfClass:[NSNull class]]) {
-					DeployedMod *mod = [[DB sharedInstance] deployedModPortal:portal ofClass:nil atSlot:i shouldCreate:NO];
+					DeployedMod *mod = [DeployedMod MR_findFirstWithPredicate:[NSPredicate predicateWithFormat:@"portal = %@ && slot = %d", portal, i]];
 					if (mod) {
-						[[[DB sharedInstance] managedObjectContext] deleteObject:mod];
+						[mod MR_deleteEntity];
 					}
+					
 				} else {
 					
 					if ([modDict[@"type"] isEqualToString:@"RES_SHIELD"]) {
-						
-						DeployedShield *shield = (DeployedShield *)[[DB sharedInstance] deployedModPortal:portal ofClass:@"DeployedShield" atSlot:i shouldCreate:YES];
+
+						DeployedShield *shield = [DeployedShield MR_findFirstWithPredicate:[NSPredicate predicateWithFormat:@"portal = %@ && slot = %d", portal, i]];
+
+						if (!shield) { shield = [DeployedShield MR_createEntity]; }
+						shield.portal = portal;
+						shield.slot = i;
 						shield.mitigation = [modDict[@"stats"][@"MITIGATION"] intValue];
 						shield.rarity = [API shieldRarityFromString:modDict[@"rarity"]];
-						shield.owner = [[DB sharedInstance] userWithGuid:modDict[@"installingUser"] shouldCreate:YES];
+
+						User *owner = [User MR_findFirstByAttribute:@"guid" withValue:modDict[@"installingUser"]];
+						if (!owner) { owner = [User MR_createEntity]; }
+						owner.guid = modDict[@"installingUser"];
+						shield.owner = owner;
+
 						[portal addModsObject:shield];
 						
 					} else {
@@ -1561,36 +1598,48 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 			//NSLog(@"Dropped resourceType: %@", resourceType);
 			
 			if ([resourceType isEqualToString:@"EMITTER_A"]) {
-				Resonator *resonator = (Resonator *)[[DB sharedInstance] getOrCreateItemWithGuid:gameEntity[0] classStr:@"Resonator"];
+				Resonator *resonator = [Resonator MR_findFirstByAttribute:@"guid" withValue:gameEntity[0]];
+				if (!resonator) { resonator = [Resonator MR_createEntity]; }
+				resonator.guid = gameEntity[0];
 				resonator.dropped = YES;
 				resonator.latitude = [loc[@"latE6"] intValue]/1E6;
 				resonator.longitude = [loc[@"lngE6"] intValue]/1E6;
 				resonator.level = [gameEntity[2][@"resourceWithLevels"][@"level"] integerValue];
 			} else if ([resourceType isEqualToString:@"EMP_BURSTER"]) {
-				XMP *xmp = (XMP *)[[DB sharedInstance] getOrCreateItemWithGuid:gameEntity[0] classStr:@"XMP"];
+				XMP *xmp = [XMP MR_findFirstByAttribute:@"guid" withValue:gameEntity[0]];
+				if (!xmp) { xmp = [XMP MR_createEntity]; }
+				xmp.guid = gameEntity[0];
 				xmp.dropped = YES;
 				xmp.latitude = [loc[@"latE6"] intValue]/1E6;
 				xmp.longitude = [loc[@"lngE6"] intValue]/1E6;
 				xmp.level = [gameEntity[2][@"resourceWithLevels"][@"level"] integerValue];
 			} else if ([resourceType isEqualToString:@"RES_SHIELD"]) {
-				Shield *shield = (Shield *)[[DB sharedInstance] getOrCreateItemWithGuid:gameEntity[0] classStr:@"Shield"];
+				Shield *shield = [Shield MR_findFirstByAttribute:@"guid" withValue:gameEntity[0]];
+				if (!shield) { shield = [Shield MR_createEntity]; }
+				shield.guid = gameEntity[0];
 				shield.dropped = YES;
 				shield.latitude = [loc[@"latE6"] intValue]/1E6;
 				shield.longitude = [loc[@"lngE6"] intValue]/1E6;
 				shield.rarity = [API shieldRarityFromString:gameEntity[2][@"modResource"][@"rarity"]];
 			} else if ([resourceType isEqualToString:@"PORTAL_LINK_KEY"]) {
-				Portal *portal = (Portal *)[[DB sharedInstance] getOrCreateItemWithGuid:gameEntity[2][@"portalCoupler"][@"portalGuid"] classStr:@"Portal"];
+				Portal *portal = [Portal MR_findFirstByAttribute:@"guid" withValue:gameEntity[2][@"portalCoupler"][@"portalGuid"]];
+				if (!portal) { portal = [Portal MR_createEntity]; }
+				portal.guid = gameEntity[2][@"portalCoupler"][@"portalGuid"];
 				portal.imageURL = gameEntity[2][@"portalCoupler"][@"portalImageUrl"];
 				portal.name = gameEntity[2][@"portalCoupler"][@"portalTitle"];
 				portal.address = gameEntity[2][@"portalCoupler"][@"portalAddress"];
 				
-				PortalKey *portalKey = (PortalKey *)[[DB sharedInstance] getOrCreateItemWithGuid:gameEntity[0] classStr:@"PortalKey"];
+				PortalKey *portalKey = [PortalKey MR_findFirstByAttribute:@"guid" withValue:gameEntity[0]];
+				if (!portalKey) { portalKey = [PortalKey MR_createEntity]; }
+				portalKey.guid = gameEntity[0];
 				portalKey.dropped = YES;
 				portalKey.latitude = [loc[@"latE6"] intValue]/1E6;
 				portalKey.longitude = [loc[@"lngE6"] intValue]/1E6;
 				portalKey.portal = portal;
 			} else if ([resourceType isEqualToString:@"MEDIA"]) {
-				Media *media = (Media *)[[DB sharedInstance] getOrCreateItemWithGuid:gameEntity[0] classStr:@"Media"];
+				Media *media = [Media MR_findFirstByAttribute:@"guid" withValue:gameEntity[0]];
+				if (!media) { media = [Media MR_createEntity]; }
+				media.guid = gameEntity[0];
 				media.dropped = YES;
 				media.latitude = [loc[@"latE6"] intValue]/1E6;
 				media.longitude = [loc[@"lngE6"] intValue]/1E6;
@@ -1598,9 +1647,19 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 				media.url = gameEntity[2][@"storyItem"][@"primaryUrl"];
 				media.level = [gameEntity[2][@"resourceWithLevels"][@"level"] integerValue];
 				media.imageURL = gameEntity[2][@"imageByUrl"][@"imageUrl"];
+			} else if ([resourceType isEqualToString:@"POWER_CUBE"]) {
+				PowerCube *powerCube = [PowerCube MR_findFirstByAttribute:@"guid" withValue:gameEntity[0]];
+				if (!powerCube) { powerCube = [PowerCube MR_createEntity]; }
+				powerCube.guid = gameEntity[0];
+				powerCube.dropped = YES;
+				powerCube.latitude = [loc[@"latE6"] intValue]/1E6;
+				powerCube.longitude = [loc[@"lngE6"] intValue]/1E6;
+				powerCube.level = [gameEntity[2][@"resourceWithLevels"][@"level"] integerValue];
 			} else {
 				NSLog(@"Unknown Dropped Item");
-				Item *itemObj = [[DB sharedInstance] getOrCreateItemWithGuid:gameEntity[0] classStr:@"Item"];
+				Item *itemObj = [Item MR_findFirstByAttribute:@"guid" withValue:gameEntity[0]];
+				if (!itemObj) { itemObj = [Item MR_createEntity]; }
+				itemObj.guid = gameEntity[0];
 				itemObj.dropped = YES;
 				itemObj.latitude = [loc[@"latE6"] intValue]/1E6;
 				itemObj.longitude = [loc[@"lngE6"] intValue]/1E6;
@@ -1612,19 +1671,27 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 			
 			//NSLog(@"link: %@", gameEntity[0]);
 
-			PortalLink *portalLink = (PortalLink *)[[DB sharedInstance] getOrCreateItemWithGuid:gameEntity[0] classStr:@"PortalLink"];
+			PortalLink *portalLink = [PortalLink MR_findFirstByAttribute:@"guid" withValue:gameEntity[0]];
+			if (!portalLink) { portalLink = [PortalLink MR_createEntity]; }
+			portalLink.guid = gameEntity[0];
 			portalLink.controllingTeam = gameEntity[2][@"controllingTeam"][@"team"];
-			
-			User *creator = [[DB sharedInstance] userWithGuid:gameEntity[2][@"creator"][@"creatorGuid"] shouldCreate:YES];
+
+			User *creator = [User MR_findFirstByAttribute:@"guid" withValue:gameEntity[2][@"creator"][@"creatorGuid"]];
+			if (!creator) { creator = [User MR_createEntity]; }
+			creator.guid = gameEntity[2][@"creator"][@"creatorGuid"];
 			portalLink.creator = creator;
 			
-			Portal *destinationPortal = (Portal *)[[DB sharedInstance] getOrCreateItemWithGuid:gameEntity[2][@"edge"][@"destinationPortalGuid"] classStr:@"Portal"];
+			Portal *destinationPortal = [Portal MR_findFirstByAttribute:@"guid" withValue:gameEntity[2][@"edge"][@"destinationPortalGuid"]];
+			if (!destinationPortal) { destinationPortal = [Portal MR_createEntity]; }
+			destinationPortal.guid = gameEntity[2][@"edge"][@"destinationPortalGuid"];
 			destinationPortal.controllingTeam = gameEntity[2][@"controllingTeam"][@"team"];
 			destinationPortal.latitude = [gameEntity[2][@"edge"][@"destinationPortalLocation"][@"latE6"] intValue]/1E6;
 			destinationPortal.longitude = [gameEntity[2][@"edge"][@"destinationPortalLocation"][@"lngE6"] intValue]/1E6;
 			portalLink.destinationPortal = destinationPortal;
 			
-			Portal *originPortal = (Portal *)[[DB sharedInstance] getOrCreateItemWithGuid:gameEntity[2][@"edge"][@"originPortalGuid"] classStr:@"Portal"];
+			Portal *originPortal = [Portal MR_findFirstByAttribute:@"guid" withValue:gameEntity[2][@"edge"][@"originPortalGuid"]];
+			if (!originPortal) { originPortal = [Portal MR_createEntity]; }
+			originPortal.guid = gameEntity[2][@"edge"][@"originPortalGuid"];
 			originPortal.controllingTeam = gameEntity[2][@"controllingTeam"][@"team"];
 			originPortal.latitude = [gameEntity[2][@"edge"][@"originPortalLocation"][@"latE6"] intValue]/1E6;
 			originPortal.longitude = [gameEntity[2][@"edge"][@"originPortalLocation"][@"lngE6"] intValue]/1E6;
@@ -1633,27 +1700,37 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 		} else if (gameEntity[2][@"capturedRegion"]) {
 			
 			//NSLog(@"capturedRegion: %@", gameEntity[0]);
-			
-			ControlField *controlField = (ControlField *)[[DB sharedInstance] getOrCreateItemWithGuid:gameEntity[0] classStr:@"ControlField"];
+
+			ControlField *controlField = [ControlField MR_findFirstByAttribute:@"guid" withValue:gameEntity[0]];
+			if (!controlField) { controlField = [ControlField MR_createEntity]; }
+			controlField.guid = gameEntity[0];
 			controlField.controllingTeam = gameEntity[2][@"controllingTeam"][@"team"];
 			controlField.entityScore = [gameEntity[2][@"entityScore"][@"entityScore"] intValue];
 			
-			User *creator = [[DB sharedInstance] userWithGuid:gameEntity[2][@"creator"][@"creatorGuid"] shouldCreate:YES];
+			User *creator = [User MR_findFirstByAttribute:@"guid" withValue:gameEntity[2][@"creator"][@"creatorGuid"]];
+			if (!creator) { creator = [User MR_createEntity]; }
+			creator.guid = gameEntity[2][@"creator"][@"creatorGuid"];
 			controlField.creator = creator;
 			
-			Portal *portalA = (Portal *)[[DB sharedInstance] getOrCreateItemWithGuid:gameEntity[2][@"capturedRegion"][@"vertexA"][@"guid"] classStr:@"Portal"];
+			Portal *portalA = [Portal MR_findFirstByAttribute:@"guid" withValue:gameEntity[2][@"capturedRegion"][@"vertexA"][@"guid"]];
+			if (!portalA) { portalA = [Portal MR_createEntity]; }
+			portalA.guid = gameEntity[2][@"capturedRegion"][@"vertexA"][@"guid"];
 			portalA.controllingTeam = gameEntity[2][@"controllingTeam"][@"team"];
 			portalA.latitude = [gameEntity[2][@"capturedRegion"][@"vertexA"][@"location"][@"latE6"] intValue]/1E6;
 			portalA.longitude = [gameEntity[2][@"capturedRegion"][@"vertexA"][@"location"][@"lngE6"] intValue]/1E6;
 			[controlField addPortalsObject:portalA];
 			
-			Portal *portalB = (Portal *)[[DB sharedInstance] getOrCreateItemWithGuid:gameEntity[2][@"capturedRegion"][@"vertexB"][@"guid"] classStr:@"Portal"];
+			Portal *portalB = [Portal MR_findFirstByAttribute:@"guid" withValue:gameEntity[2][@"capturedRegion"][@"vertexB"][@"guid"]];
+			if (!portalB) { portalB = [Portal MR_createEntity]; }
+			portalB.guid = gameEntity[2][@"capturedRegion"][@"vertexB"][@"guid"];
 			portalB.controllingTeam = gameEntity[2][@"controllingTeam"][@"team"];
 			portalB.latitude = [gameEntity[2][@"capturedRegion"][@"vertexB"][@"location"][@"latE6"] intValue]/1E6;
 			portalB.longitude = [gameEntity[2][@"capturedRegion"][@"vertexB"][@"location"][@"lngE6"] intValue]/1E6;
 			[controlField addPortalsObject:portalB];
 			
-			Portal *portalC = (Portal *)[[DB sharedInstance] getOrCreateItemWithGuid:gameEntity[2][@"capturedRegion"][@"vertexC"][@"guid"] classStr:@"Portal"];
+			Portal *portalC = [Portal MR_findFirstByAttribute:@"guid" withValue:gameEntity[2][@"capturedRegion"][@"vertexC"][@"guid"]];
+			if (!portalC) { portalC = [Portal MR_createEntity]; }
+			portalC.guid = gameEntity[2][@"capturedRegion"][@"vertexC"][@"guid"];
 			portalC.controllingTeam = gameEntity[2][@"controllingTeam"][@"team"];
 			portalC.latitude = [gameEntity[2][@"capturedRegion"][@"vertexC"][@"location"][@"latE6"] intValue]/1E6;
 			portalC.longitude = [gameEntity[2][@"capturedRegion"][@"vertexC"][@"location"][@"lngE6"] intValue]/1E6;
@@ -1703,10 +1780,18 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 - (void)processEnergyGlobGuids:(NSArray *)energyGlobGuids {
 	//NSLog(@"processEnergyGlobGuids: %d", energyGlobGuids.count);
 	for (NSString *energyGlobGuid in energyGlobGuids) {
-		//[[DB sharedInstance] addEnergyGlobWithGuid:energyGlobGuid];
-		[[DB sharedInstance] getOrCreateItemWithGuid:energyGlobGuid classStr:@"EnergyGlob"];
+		EnergyGlob *energyGlob = [EnergyGlob MR_findFirstByAttribute:@"guid" withValue:energyGlobGuid];
+		if (!energyGlob) { energyGlob = [EnergyGlob MR_createEntity]; }
+		energyGlob.guid = energyGlobGuid;
+
+		NSScanner *scanner = [NSScanner scannerWithString:[energyGlobGuid substringToIndex:16]]; //19
+		unsigned long long numCellId;
+		[scanner scanHexLongLong:&numCellId];
+		CLLocationCoordinate2D coord = [S2Geometry coordinateForCellId:numCellId];
+		energyGlob.latitude = coord.latitude;
+		energyGlob.longitude = coord.longitude;
 	}
-	[[DB sharedInstance] saveContext];
+	[[NSManagedObjectContext MR_defaultContext] MR_saveToPersistentStoreWithCompletion:nil];
 }
 
 - (void)processAPGains:(NSArray *)apGains {
@@ -1737,9 +1822,12 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 	//NSLog(@"processDeletedEntityGuids: %d", deletedEntityGuids.count);
 	
 	for (NSString *deletedGuid in deletedEntityGuids) {
-		[[DB sharedInstance] removeItemWithGuid:deletedGuid];
+		Item *item = [Item MR_findFirstWithPredicate:[NSPredicate predicateWithFormat:@"guid = %@", deletedGuid]];
+		if (item) {
+			[item MR_deleteEntity];
+		}
 	}
-	[[DB sharedInstance] saveContext];
+	[[NSManagedObjectContext MR_defaultContext] MR_saveToPersistentStoreWithCompletion:nil];
 }
 
 @end
