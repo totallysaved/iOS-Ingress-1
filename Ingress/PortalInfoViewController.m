@@ -176,8 +176,13 @@
 				
 				NSMutableString *acquiredItemsStr = [NSMutableString string];
 				
-				for (NSString *GUID in acquiredItems) {
-					[acquiredItemsStr appendFormat:@"%@\n", [[DB sharedInstance] getItemWithGuid:GUID]];
+				for (NSString *guid in acquiredItems) {
+					Item *item = [Item MR_findFirstWithPredicate:[NSPredicate predicateWithFormat:@"guid = %@", guid]];
+					if (item) {
+						[acquiredItemsStr appendFormat:@"%@\n", item];
+					} else {
+						[acquiredItemsStr appendString:@"Unknown Item\n"];
+					}
 				}
 				
 				HUD.labelText = @"Items acquired";
