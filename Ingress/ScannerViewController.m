@@ -37,12 +37,14 @@
 	[xmIndicator setProgressImage:[[UIImage imageNamed:@"progressImage-aliens.png"] resizableImageWithCapInsets:UIEdgeInsetsMake(7, 7, 7, 7)]];
 	[xmIndicator setTrackImage:[[UIImage imageNamed:@"trackImage.png"] resizableImageWithCapInsets:UIEdgeInsetsMake(2, 2, 2, 2)]];
 
+//	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(managedObjectContextObjectsDidChange:) name:NSManagedObjectContextObjectsDidChangeNotification object:nil];
+
 	locationManager = [[CLLocationManager alloc] init];
     locationManager.delegate = self;
     locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation;
 	
 	[locationManager startUpdatingLocation];
-//	[locationManager startUpdatingHeading];
+	[locationManager startUpdatingHeading];
 
 	if (YES) { // TODO: Free moving allowed for debug only
 		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^(void){
@@ -56,28 +58,19 @@
 	UIPinchGestureRecognizer *recognizer = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(handlePinch:)];
 	[_mapView addGestureRecognizer:recognizer];
 
-//	rangeCircleView = [UIView new];
-//	rangeCircleView.frame = CGRectMake(0, 0, 0, 0);
-//	rangeCircleView.center = _mapView.center;
-//	rangeCircleView.backgroundColor = [UIColor clearColor];
-//	rangeCircleView.opaque = NO;
-//	rangeCircleView.userInteractionEnabled = NO;
-//	rangeCircleView.layer.cornerRadius = 0;
-//	rangeCircleView.layer.masksToBounds = YES;
-//	rangeCircleView.layer.borderWidth = 2;
-//	rangeCircleView.layer.borderColor = [[[UIColor blueColor] colorWithAlphaComponent:0.25] CGColor];
-//	[self.view addSubview:rangeCircleView];
-//
-//	[NSTimer scheduledTimerWithTimeInterval:.01 target:self selector:@selector(updateCircle) userInfo:nil repeats:YES];
+	rangeCircleView = [UIView new];
+	rangeCircleView.frame = CGRectMake(0, 0, 0, 0);
+	rangeCircleView.center = _mapView.center;
+	rangeCircleView.backgroundColor = [UIColor clearColor];
+	rangeCircleView.opaque = NO;
+	rangeCircleView.userInteractionEnabled = NO;
+	rangeCircleView.layer.cornerRadius = 0;
+	rangeCircleView.layer.masksToBounds = YES;
+	rangeCircleView.layer.borderWidth = 2;
+	rangeCircleView.layer.borderColor = [[[UIColor blueColor] colorWithAlphaComponent:0.25] CGColor];
+	[self.view addSubview:rangeCircleView];
 
-//	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^(void){
-//		[_mapView setRegion:MKCoordinateRegionMakeWithDistance(_mapView.userLocation.location.coordinate, 150, 150) animated:NO];
-//		[_mapView setUserTrackingMode:MKUserTrackingModeFollow animated:NO];
-//		[_mapView setShowsUserLocation:YES];
-//	});
-
-//	UILongPressGestureRecognizer *xmpLongPressGesture = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(xmpLongPressGestureHandler:)];
-//	[fireXmpButton addGestureRecognizer:xmpLongPressGesture];
+	[NSTimer scheduledTimerWithTimeInterval:.01 target:self selector:@selector(updateCircle) userInfo:nil repeats:YES];
 
 //	if ([CLLocationManager authorizationStatus] != kCLAuthorizationStatusAuthorized) {
 //#warning location
@@ -87,13 +80,11 @@
 //		HUD.mode = MBProgressHUDModeCustomView;
 //		HUD.customView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"warning.png"]];
 //		HUD.labelText = @"Please allow location services";
-//		HUD.labelFont = [UIFont fontWithName:@"Coda-Regular" size:16];
+//		HUD.labelFont = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:16];
 //		[self.view addSubview:HUD];
 //		[HUD show:YES];
 //	}
-	
-//	[mapView.userLocation addObserver:self forKeyPath:@"location" options:(NSKeyValueObservingOptionNew|NSKeyValueObservingOptionOld) context:NULL];
-	
+
 //	UITapGestureRecognizer *mapViewGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(mapTapped:)];
 //	[_mapView addGestureRecognizer:mapViewGestureRecognizer];
 
@@ -144,7 +135,23 @@
 
 - (IBAction)refresh {
 
-//	[[SoundManager sharedManager] playSound:@"Sound/sfx_ui_success.aif"];
+//	[MagicalRecord saveWithBlock:^(NSManagedObjectContext *localContext) {
+//		[ControlField MR_truncateAllInContext:localContext];
+//		[PortalLink MR_truncateAllInContext:localContext];
+//		[Item MR_deleteAllMatchingPredicate:[NSPredicate predicateWithFormat:@"dropped = YES"] inContext:localContext];
+//		[EnergyGlob MR_truncateAllInContext:localContext];
+//		[DeployedResonator MR_truncateAllInContext:localContext];
+//		[DeployedMod MR_truncateAllInContext:localContext];
+//	} completion:^(BOOL success, NSError *error) {
+//		[[API sharedInstance] getObjectsWithCompletionHandler:^{ }];
+//	}];
+
+	[ControlField MR_truncateAll];
+	[PortalLink MR_truncateAll];
+	[Item MR_deleteAllMatchingPredicate:[NSPredicate predicateWithFormat:@"dropped = YES"]];
+	[EnergyGlob MR_truncateAll];
+	[DeployedResonator MR_truncateAll];
+	[DeployedMod MR_truncateAll];
 
 	__block MBProgressHUD *HUD = [[MBProgressHUD alloc] initWithView:self.view];
 	HUD.userInteractionEnabled = YES;
@@ -226,72 +233,6 @@
 
 }
 
-//#pragma mark - Map Data Calc
-//
-//- (double)convertCenterLat:(CLLocationDegrees)centerLat {
-//	return round(256 * 0.9999 * ABS(1 / cos(centerLat * (M_PI/180))));
-//}
-//
-//- (double)calculateR:(double)convCenterLat {
-//	return 1 << _mapView.zoomLevel - (int)round(convCenterLat / 256 - 1);
-//}
-//
-//- (CGPoint)convertLatLngToPoint:(CLLocationCoordinate2D)latlng magic:(double)magic R:(double)R {
-//	double x = (magic/2 + latlng.longitude * magic / 360)*R;
-//	double l = sin(latlng.latitude * (M_PI/180));
-//	double y =  (magic/2 + 0.5*log((1+l)/(1-l)) * -(magic / (2*M_PI)))*R;
-//	return CGPointMake(floor(x/magic), floor(y/magic));
-//}
-//
-//- (NSArray *)convertPointToLatLng:(CGPoint)point magic:(double)magic R:(double)R {
-//
-//	// orig function put together from all over the place
-//	// lat: (2 * Math.atan(Math.exp((((y + 1) * magic / R) - (magic/ 2)) / (-1*(magic / (2 * Math.PI))))) - Math.PI / 2) / (Math.PI / 180),
-//	// shortened version by your favorite algebra program.
-//	CLLocationCoordinate2D sw = CLLocationCoordinate2DMake((360*atan(exp(M_PI - 2*M_PI*(point.y+1)/R)))/M_PI - 90, 360*point.x/R-180);
-//	CLLocation *swLoc = [[CLLocation alloc] initWithLatitude:sw.latitude longitude:sw.longitude];
-//
-//	// lat: (2 * Math.atan(Math.exp(((y * magic / R) - (magic/ 2)) / (-1*(magic / (2 * Math.PI))))) - Math.PI / 2) / (Math.PI / 180),
-//	CLLocationCoordinate2D ne = CLLocationCoordinate2DMake((360*atan(exp(M_PI - 2*M_PI*point.y/R)))/M_PI - 90, 360*(point.x+1)/R-180);
-//	CLLocation *neLoc = [[CLLocation alloc] initWithLatitude:ne.latitude longitude:ne.longitude];
-//
-//	return @[swLoc, neLoc];
-//
-//}
-//
-//// calculates the quad key for a given point. The point is not(!) in lat/lng format.
-//- (NSString *)pointToQuadKey:(CGPoint)point {
-////	return [NSString stringWithFormat:@"%d_%.0f_%.0f", _mapView.zoomLevel-1, point.x, point.y];
-//	NSMutableArray *quadkey = [NSMutableArray array];
-//	for(int c = _mapView.zoomLevel-1; c > 0; c--) {
-//		//  +-------+   quadrants are probably ordered like this
-//		//  | 0 | 1 |
-//		//  |---|---|
-//		//  | 2 | 3 |
-//		//  |---|---|
-//		int quadrant = 0;
-//		int e = 1 << c - 1;
-//		((int)point.x & e) != 0 && quadrant++;               // push right
-//		((int)point.y & e) != 0 && (quadrant++, quadrant++); // push down
-//		[quadkey addObject:@(quadrant)];
-//	}
-//	return [quadkey componentsJoinedByString:@""];
-//}
-//
-//// given quadkey and bounds, returns the format as required by the Ingress API to request map data.
-//- (NSDictionary *)generateBoundsParams:(NSString *)quadkey bounds:(NSArray *)bounds {
-//	return @{
-//		@"id": quadkey,
-//		@"qk": quadkey,
-//		@"minLatE6": @(round([bounds[0] coordinate].latitude * 1E6)),
-//		@"minLngE6": @(round([bounds[0] coordinate].longitude * 1E6)),
-//		@"maxLatE6": @(round([bounds[1] coordinate].latitude * 1E6)),
-//		@"maxLngE6": @(round([bounds[1] coordinate].longitude * 1E6))
-//	};
-//}
-
-
-
 - (void)refreshProfile {
 
 	NSDictionary *playerInfo = [[API sharedInstance] playerInfo];
@@ -330,6 +271,90 @@
 
 }
 
+#pragma mark - NSManagedObjectContext Did Change
+
+- (void)managedObjectContextObjectsDidChange:(NSNotification *)notification {
+
+	dispatch_async(dispatch_get_main_queue(), ^{
+		for (NSManagedObject *object in notification.userInfo[NSDeletedObjectsKey]) {
+			if ([object isKindOfClass:[Portal class]]) {
+				Portal *portal = (Portal *)object;
+				[_mapView removeAnnotation:portal];
+//				[_mapView removeOverlay:portal];
+			} else if ([object isKindOfClass:[EnergyGlob class]]) {
+				EnergyGlob *xm = (EnergyGlob *)object;
+				[_mapView removeOverlay:xm.circle];
+			} else if ([object isKindOfClass:[Item class]]) {
+				Item *item = (Item *)object;
+				[_mapView removeAnnotation:item];
+			} else if ([object isKindOfClass:[PortalLink class]]) {
+				PortalLink *portalLink = (PortalLink *)object;
+				[_mapView removeOverlay:portalLink.polyline];
+			} else if ([object isKindOfClass:[ControlField class]]) {
+				ControlField *controlField = (ControlField *)object;
+				[_mapView removeOverlay:controlField.polygon];
+			} else if ([object isKindOfClass:[DeployedResonator class]]) {
+				DeployedResonator *resonator = (DeployedResonator *)object;
+				[_mapView removeOverlay:resonator.circle];
+			}
+		}
+
+		for (NSManagedObject *object in notification.userInfo[NSInsertedObjectsKey]) {
+			if ([object isKindOfClass:[Portal class]]) {
+				Portal *portal = (Portal *)object;
+				[_mapView addAnnotation:portal];
+//				[_mapView addOverlay:portal];
+			} else if ([object isKindOfClass:[EnergyGlob class]]) {
+				EnergyGlob *xm = (EnergyGlob *)object;
+				[_mapView addOverlay:xm.circle];
+			} else if ([object isKindOfClass:[Item class]]) {
+				Item *item = (Item *)object;
+				[_mapView addAnnotation:item];
+			} else if ([object isKindOfClass:[PortalLink class]]) {
+				PortalLink *portalLink = (PortalLink *)object;
+				[_mapView addOverlay:portalLink.polyline];
+			} else if ([object isKindOfClass:[ControlField class]]) {
+				ControlField *controlField = (ControlField *)object;
+				[_mapView addOverlay:controlField.polygon];
+			} else if ([object isKindOfClass:[DeployedResonator class]]) {
+				DeployedResonator *resonator = (DeployedResonator *)object;
+				[_mapView addOverlay:resonator.circle];
+			}
+		}
+
+		for (NSManagedObject *object in notification.userInfo[NSUpdatedObjectsKey]) {
+			if ([object isKindOfClass:[Portal class]]) {
+				Portal *portal = (Portal *)object;
+				[_mapView removeAnnotation:portal];
+				[_mapView addAnnotation:portal];
+//				[_mapView removeOverlay:portal];
+//				[_mapView addOverlay:portal];
+			} else if ([object isKindOfClass:[EnergyGlob class]]) {
+				EnergyGlob *xm = (EnergyGlob *)object;
+				[_mapView removeOverlay:xm.circle];
+				[_mapView addOverlay:xm.circle];
+			} else if ([object isKindOfClass:[Item class]]) {
+				Item *item = (Item *)object;
+				[_mapView removeAnnotation:item];
+				[_mapView addAnnotation:item];
+			} else if ([object isKindOfClass:[PortalLink class]]) {
+				PortalLink *portalLink = (PortalLink *)object;
+				[_mapView removeOverlay:portalLink.polyline];
+				[_mapView addOverlay:portalLink.polyline];
+			} else if ([object isKindOfClass:[ControlField class]]) {
+				ControlField *controlField = (ControlField *)object;
+				[_mapView removeOverlay:controlField.polygon];
+				[_mapView addOverlay:controlField.polygon];
+			} else if ([object isKindOfClass:[DeployedResonator class]]) {
+				DeployedResonator *resonator = (DeployedResonator *)object;
+				[_mapView removeOverlay:resonator.circle];
+				[_mapView addOverlay:resonator.circle];
+			}
+		}
+	});
+
+}
+
 #pragma mark - Pinch Gesture
 
 - (void)handlePinch:(UIPinchGestureRecognizer*)recognizer {
@@ -345,14 +370,14 @@
     [_mapView setRegion:MKCoordinateRegionMake(originalRegion.center, span) animated:NO];
 }
 
-//#pragma mark - Circle
-//
-//- (void)updateCircle {
-//	CGFloat diameter = 100/((_mapView.region.span.latitudeDelta * 111200) / _mapView.bounds.size.width);
-//	rangeCircleView.frame = CGRectMake(0, 0, diameter, diameter);
-//	rangeCircleView.center = _mapView.center;
-//	rangeCircleView.layer.cornerRadius = diameter/2;
-//}
+#pragma mark - Circle
+
+- (void)updateCircle {
+	CGFloat diameter = 100/((_mapView.region.span.latitudeDelta * 111200) / _mapView.bounds.size.width);
+	rangeCircleView.frame = CGRectMake(0, 0, diameter, diameter);
+	rangeCircleView.center = _mapView.center;
+	rangeCircleView.layer.cornerRadius = diameter/2;
+}
 
 //#pragma mark - KVO
 //
@@ -376,7 +401,7 @@
 }
 
 - (BOOL)locationManagerShouldDisplayHeadingCalibration:(CLLocationManager *)manager {
-	return YES;
+	return NO;
 }
 
 - (void)locationManager:(CLLocationManager *)manager didUpdateHeading:(CLHeading *)newHeading {
@@ -420,7 +445,7 @@
 		HUD.userInteractionEnabled = YES;
 		HUD.mode = MBProgressHUDModeIndeterminate;
 		HUD.dimBackground = YES;
-		HUD.labelFont = [UIFont fontWithName:@"Coda-Regular" size:16];
+		HUD.labelFont = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:16];
 		HUD.labelText = @"Picking up...";
 		[[AppDelegate instance].window addSubview:HUD];
 		[HUD show:YES];
@@ -441,11 +466,10 @@
 				HUD = [[MBProgressHUD alloc] initWithView:[AppDelegate instance].window];
 				HUD.userInteractionEnabled = YES;
 				HUD.dimBackground = YES;
-				HUD.labelFont = [UIFont fontWithName:@"Coda-Regular" size:16];
-				HUD.detailsLabelFont = [UIFont fontWithName:@"Coda-Regular" size:12];
+				HUD.labelFont = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:16];
 				HUD.mode = MBProgressHUDModeCustomView;
 				HUD.customView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"warning.png"]];
-				HUD.detailsLabelFont = [UIFont fontWithName:@"Coda-Regular" size:16];
+				HUD.detailsLabelFont = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:16];
 				HUD.detailsLabelText = errorStr;
 				[[AppDelegate instance].window addSubview:HUD];
 				[HUD show:YES];
@@ -587,8 +611,8 @@
 //	//NSLog(@"Tapped overlay: %@", tappedOverlay);
 //	//NSLog(@"Tapped view: %@", [mapView viewForOverlay:tappedOverlay]);
 //	
-//	if ([tappedOverlay isKindOfClass:[PortalItem class]]) {
-//		currentPortalItem = (PortalItem *)tappedOverlay;
+//	if ([tappedOverlay isKindOfClass:[Portal class]]) {
+//		currentPortal = (Portal *)tappedOverlay;
 //		[self performSegueWithIdentifier:@"PortalDetailSegue" sender:self];
 //	}
 //}
@@ -613,6 +637,24 @@
 		[HUD show:YES];
 		
 	}
+}
+
+#pragma mark - Collecting XM
+
+- (IBAction)collectXM {
+
+	[[SoundManager sharedManager] playSound:@"Sound/sfx_ui_success.aif"];
+	
+	MBProgressHUD *HUD = [[MBProgressHUD alloc] initWithView:[AppDelegate instance].window];
+	HUD.userInteractionEnabled = YES;
+	HUD.mode = MBProgressHUDModeCustomView;
+	HUD.dimBackground = YES;
+	HUD.showCloseButton = YES;
+	_xmCollectView = [XMCollectViewController xmCollectView];
+	HUD.customView = _xmCollectView.view;
+	[[AppDelegate instance].window addSubview:HUD];
+	[HUD show:YES];
+
 }
 
 #pragma mark - Firing XMP
@@ -645,7 +687,7 @@
 
 - (void)fireXMPOfLevel:(int)level {
 	
-	XMP *xmpItem = [XMP MR_findFirstWithPredicate:[NSPredicate predicateWithFormat:@"dropped = NO && level = %d", level] andRetrieveAttributes:@[@"guid"]];
+	XMP *xmpItem = [XMP MR_findFirstWithPredicate:[NSPredicate predicateWithFormat:@"dropped = NO && level = %d", level]];
 
 	NSLog(@"Firing: %@", xmpItem);
 	
@@ -655,10 +697,10 @@
 		MBProgressHUD *HUD = [[MBProgressHUD alloc] initWithView:[AppDelegate instance].window];
 		HUD.userInteractionEnabled = YES;
 		HUD.dimBackground = YES;
-		HUD.labelFont = [UIFont fontWithName:@"Coda-Regular" size:16];
+		HUD.labelFont = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:16];
 		HUD.mode = MBProgressHUDModeCustomView;
 		HUD.customView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"warning.png"]];
-		HUD.detailsLabelFont = [UIFont fontWithName:@"Coda-Regular" size:16];
+		HUD.detailsLabelFont = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:16];
 		HUD.detailsLabelText = @"No XMP remaining!";
 		[[AppDelegate instance].window addSubview:HUD];
 		[HUD show:YES];
@@ -669,7 +711,7 @@
 	MBProgressHUD *HUD = [[MBProgressHUD alloc] initWithView:[AppDelegate instance].window];
 	HUD.userInteractionEnabled = YES;
 	HUD.dimBackground = YES;
-	HUD.labelFont = [UIFont fontWithName:@"Coda-Regular" size:16];
+	HUD.labelFont = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:16];
 	HUD.labelText = [NSString stringWithFormat:@"Firing XMP of level: %d", level];
 	[[AppDelegate instance].window addSubview:HUD];
 	[HUD show:YES];
@@ -681,13 +723,13 @@
 		MBProgressHUD *HUD = [[MBProgressHUD alloc] initWithView:[AppDelegate instance].window];
 		HUD.userInteractionEnabled = YES;
 		HUD.dimBackground = YES;
-		HUD.labelFont = [UIFont fontWithName:@"Coda-Regular" size:16];
+		HUD.labelFont = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:16];
 		
 		if (damages) {
 			
 //			HUD.mode = MBProgressHUDModeText;
 //			HUD.labelText = @"Damages";
-//			HUD.detailsLabelFont = [UIFont fontWithName:@"Coda-Regular" size:10];
+//			HUD.detailsLabelFont = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:10];
 			
 			UITextView *textView = [[UITextView alloc] initWithFrame:CGRectMake(0, 0, 240, 320)];
 			textView.editable = NO;
@@ -744,7 +786,7 @@
 			
 			HUD.mode = MBProgressHUDModeCustomView;
 			HUD.customView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"warning.png"]];
-			HUD.detailsLabelFont = [UIFont fontWithName:@"Coda-Regular" size:16];
+			HUD.detailsLabelFont = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:16];
 			
 			if (errorStr) {
 				HUD.detailsLabelText = errorStr;
