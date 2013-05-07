@@ -28,8 +28,9 @@ typedef void (^SoundCompletionBlock)(void);
 @property (nonatomic, strong) NSOperationQueue *notificationQueue;
 @property (nonatomic, strong) NSString *xsrfToken;
 @property (nonatomic, strong) NSString *SACSID;
-@property (nonatomic, strong) NSDictionary *playerInfo;
-@property (nonatomic) NSInteger numberOfEnergyToCollect;
+@property (nonatomic, strong) NSMutableDictionary *playerInfo;
+@property (nonatomic, strong) NSMutableArray *energyToCollect;
+@property (nonatomic, readonly) long long knobSyncTimestamp;
 
 @property (nonatomic) SystemSoundID ui_success_sound;
 @property (nonatomic) SystemSoundID ui_fail_sound;
@@ -41,7 +42,6 @@ typedef void (^SoundCompletionBlock)(void);
 + (NSString *)shieldRarityStrFromRarity:(PortalShieldRarity)shieldRarity;
 
 + (int)levelForAp:(int)ap;
-+ (int)levelImageForAp:(int)ap;
 + (int)maxApForLevel:(int)level;
 + (int)maxXmForLevel:(int)level;
 + (int)maxEnergyForResonatorLevel:(int)level;
@@ -75,7 +75,7 @@ typedef void (^SoundCompletionBlock)(void);
 - (void)fireXMP:(XMP *)xmpItem completionHandler:(void (^)(NSString *errorStr, NSDictionary *damages))handler;
 - (void)validateNickname:(NSString *)nickname completionHandler:(void (^)(NSString *errorStr))handler;
 - (void)persistNickname:(NSString *)nickname completionHandler:(void (^)(NSString *errorStr))handler;
-- (void)chooseFaction:(NSString *)faction completionHandler:(void (^)(void))handler;
+- (void)chooseFaction:(NSString *)faction completionHandler:(void (^)(NSString *errorStr))handler;
 - (void)hackPortal:(Portal *)portal completionHandler:(void (^)(NSString *errorStr, NSArray *acquiredItems, int secondsRemaining))handler;
 - (void)deployResonator:(Resonator *)resonatorItem toPortal:(Portal *)portal toSlot:(int)slot completionHandler:(void (^)(NSString *errorStr))handler;
 - (void)upgradeResonator:(Resonator *)resonatorItem toPortal:(Portal *)portal toSlot:(int)slot completionHandler:(void (^)(NSString *errorStr))handler;
@@ -85,6 +85,8 @@ typedef void (^SoundCompletionBlock)(void);
 - (void)recycleItem:(Item *)item completionHandler:(void (^)(void))handler;
 - (void)usePowerCube:(PowerCube *)powerCube completionHandler:(void (^)(void))handler;
 - (void)rechargePortal:(Portal *)portal completionHandler:(void (^)(void))handler;
+- (void)queryLinkabilityForPortal:(Portal *)portal portalKey:(PortalKey *)portalKey completionHandler:(void (^)(NSString *errorStr))handler;
+- (void)linkPortal:(Portal *)portal withPortalKey:(PortalKey *)portalKey completionHandler:(void (^)(NSString *errorStr))handler;
 
 - (void)cheatSetPlayerLevel;
 

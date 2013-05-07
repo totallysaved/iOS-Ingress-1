@@ -21,7 +21,8 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 @synthesize xsrfToken = _xsrfToken;
 @synthesize SACSID = _SACSID;
 @synthesize playerInfo = _playerInfo;
-@synthesize numberOfEnergyToCollect = _numberOfEnergyToCollect;
+@synthesize energyToCollect = _energyToCollect;
+@synthesize knobSyncTimestamp = _knobSyncTimestamp;
 
 @synthesize ui_success_sound = _ui_success_sound;
 @synthesize ui_fail_sound = _ui_fail_sound;
@@ -41,7 +42,7 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 		soundsQueue = [NSMutableArray array];
 		self.networkQueue = [NSOperationQueue new];
         self.notificationQueue = [NSOperationQueue new];
-		self.numberOfEnergyToCollect = 0;
+		self.energyToCollect = [NSMutableArray array];
 	}
     return self;
 }
@@ -116,16 +117,8 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 	
 }
 
-+ (int)levelImageForAp:(int)ap {
-	int level = [API levelForAp:ap];
-	float max = (float)[API maxApForLevel:level];
-	NSArray *maxAPs = @[@0, @10000, @30000, @70000, @150000, @300000, @600000, @1200000];
-	int lvlImg = max == 0 ? 0 : floorf(8 * ((ap - [maxAPs[level - 1] floatValue]) / ([maxAPs[level] floatValue] - [maxAPs[level - 1] floatValue])));
-	return lvlImg;
-}
-
 + (int)maxApForLevel:(int)level {
-	return (level > 0 && level < 8) ? [@[@0, @10000, @30000, @70000, @150000, @300000, @600000, @1200000][level] intValue] : 0;
+	return (level > 0 && level < 8) ? [@[@0, @10000, @30000, @70000, @150000, @300000, @600000, @1200000, @(INFINITY)][level] intValue] : 0;
 }
 
 + (int)maxXmForLevel:(int)level {
@@ -219,12 +212,20 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 
 + (UIColor *)colorForFaction:(NSString *)faction {
 	if ([faction isEqualToString:@"ALIENS"]) {
-		return [UIColor colorWithRed:40./255. green:244./255. blue:40./255. alpha:1];
+		return [UIColor colorWithRed:0.000 green:0.945 blue:0.439 alpha:1.000];
 	} else if ([faction isEqualToString:@"RESISTANCE"]) {
 		return [UIColor colorWithRed:0 green:194./255. blue:1 alpha:1];
 	} else {
 		return [UIColor grayColor];
 	}
+}
+
+#pragma mark - Knob Sync
+
+- (long long)knobSyncTimestamp {
+	NSString *timestampString = [NSString stringWithFormat:@"%.3f", [[NSDate date] timeIntervalSinceReferenceDate]];
+	timestampString = [timestampString stringByReplacingOccurrencesOfString:@"." withString:@""];
+	return [timestampString longLongValue];
 }
 
 #pragma mark - Sound
@@ -561,7 +562,7 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 	if (jsonObject) {
 		
 //		NSLog(@"processHandshakeData: %@", jsonObject);
-		
+
 		if ([jsonObject[@"result"][@"pregameStatus"][@"action"] isEqualToString:@"USER_REQUIRES_ACTIVATION"]) {
 			dispatch_async(dispatch_get_main_queue(), ^{
 				handler(@"USER_REQUIRES_ACTIVATION");
@@ -593,31 +594,26 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 			return;
 		}
 		
-		if ([jsonObject[@"result"][@"playerEntity"][2][@"playerPersonal"][@"allowFactionChoice"] boolValue]) {
-			NSLog(@"allowFactionChoice");
-			
-//			UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"Faction choose" message:nil delegate:self cancelButtonTitle:@"Later" otherButtonTitles:@"Enlightened", @"Resistance", nil];
-//			[alertView show];
-			
-//			[[API sharedInstance] chooseFaction:@"ALIENS/RESISTANCE" completionHandler:^{ }];
-		}
-		
-		self.playerInfo = @{
-		@"nickname": jsonObject[@"result"][@"nickname"],
-		@"team": jsonObject[@"result"][@"playerEntity"][2][@"controllingTeam"][@"team"],
-		@"ap": jsonObject[@"result"][@"playerEntity"][2][@"playerPersonal"][@"ap"],
-		@"energy": jsonObject[@"result"][@"playerEntity"][2][@"playerPersonal"][@"energy"]
-		};
-		
-		//[[NSNotificationCenter defaultCenter] postNotificationName:@"ProfileUpdatedNotification" object:nil];
+		self.playerInfo = [@{
+			@"nickname": jsonObject[@"result"][@"nickname"],
+			@"team": jsonObject[@"result"][@"playerEntity"][2][@"controllingTeam"][@"team"],
+			@"ap": jsonObject[@"result"][@"playerEntity"][2][@"playerPersonal"][@"ap"],
+			@"energy": jsonObject[@"result"][@"playerEntity"][2][@"playerPersonal"][@"energy"],
+			@"allowNicknameEdit": jsonObject[@"result"][@"playerEntity"][2][@"playerPersonal"][@"allowNicknameEdit"],
+			@"allowFactionChoice": jsonObject[@"result"][@"playerEntity"][2][@"playerPersonal"][@"allowFactionChoice"],
+			@"shouldSendEmail": jsonObject[@"result"][@"playerEntity"][2][@"playerPersonal"][@"notificationSettings"][@"shouldSendEmail"],
+			@"maySendPromoEmail": jsonObject[@"result"][@"playerEntity"][2][@"playerPersonal"][@"notificationSettings"][@"maySendPromoEmail"],
+		} mutableCopy];
+
+		[[NSNotificationCenter defaultCenter] postNotificationName:@"ProfileUpdatedNotification" object:nil];
 
 		dispatch_async(dispatch_get_main_queue(), ^{
 			handler(nil);
 			
 			/////
 			
-			[[API sharedInstance] playSounds:@[@"SPEECH_ZOOM_ACQUIRING", @"SPEECH_ZOOM_LOCKON", @"SPEECH_ZOOM_DOWNLOADING"]];
-			
+//			[[API sharedInstance] playSounds:@[@"SPEECH_ZOOM_ACQUIRING", @"SPEECH_ZOOM_LOCKON", @"SPEECH_ZOOM_DOWNLOADING"]];
+
 //			[[SoundManager sharedManager] playSound:@"Sound/speech_zoom_acquiring.aif"];
 //			
 //			dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^(void){
@@ -655,8 +651,6 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 
 - (void)getObjectsWithCompletionHandler:(void (^)(void))handler {
 
-//	[[DB sharedInstance] removeAllMapData];
-
 	MKMapView *mapView = [AppDelegate instance].mapView;
 	CGPoint nePoint = CGPointMake(mapView.bounds.origin.x + mapView.bounds.size.width, mapView.bounds.origin.y);
 	CGPoint swPoint = CGPointMake((mapView.bounds.origin.x), (mapView.bounds.origin.y + mapView.bounds.size.height));
@@ -671,7 +665,7 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 	
 	NSDictionary *dict = @{
 		@"playerLocation": [self currentE6Location],
-		@"knobSyncTimestamp": @(0),
+		@"knobSyncTimestamp": @(self.knobSyncTimestamp),
 		//@"energyGlobGuids": @[],
 		@"cellsAsHex": cellsAsHex,
 		@"dates": dates
@@ -727,22 +721,28 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 			
 			NSArray *markups = message[2][@"plext"][@"markup"];
 			BOOL isMessage = NO;
+			BOOL mentionsYou = NO;
 			int start = 0;
 			for (NSArray *markup in markups) {
 				//NSLog(@"%@: %@", markup[0], markup[1][@"plain"]);
 				
 				NSRange range = [str rangeOfString:markup[1][@"plain"] options:0 range:NSMakeRange(start, str.length-start)];
 				
-				if ([markup[0] isEqualToString:@"PLAYER"] || [markup[0] isEqualToString:@"SENDER"]) {
+				if ([markup[0] isEqualToString:@"PLAYER"] || [markup[0] isEqualToString:@"SENDER"] || [markup[0] isEqualToString:@"AT_PLAYER"]) {
 					
 					if ([markup[0] isEqualToString:@"SENDER"]) {
 						isMessage = YES;
 					}
-					
-					if ([markup[1][@"team"] isEqualToString:@"ALIENS"]) {
-						[atrstr setAttributes:@{NSFontAttributeName: [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:16], NSForegroundColorAttributeName : [UIColor colorWithRed:40./255. green:244./255. blue:40./255. alpha:1]} range:range];
+
+					if ([markup[0] isEqualToString:@"AT_PLAYER"] && [[markup[1][@"plain"] substringFromIndex:1] isEqualToString:self.playerInfo[@"nickname"]]) {
+							[atrstr setAttributes:@{NSFontAttributeName: [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:16], NSForegroundColorAttributeName : [UIColor colorWithRed:1.000 green:0.839 blue:0.322 alpha:1.000]} range:range];
+						mentionsYou = YES;
 					} else {
-						[atrstr setAttributes:@{NSFontAttributeName: [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:16], NSForegroundColorAttributeName : [UIColor colorWithRed:0 green:194./255. blue:1 alpha:1]} range:range];
+						if ([markup[1][@"team"] isEqualToString:@"ALIENS"]) {
+							[atrstr setAttributes:@{NSFontAttributeName: [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:16], NSForegroundColorAttributeName : [UIColor colorWithRed:40./255. green:244./255. blue:40./255. alpha:1]} range:range];
+						} else {
+							[atrstr setAttributes:@{NSFontAttributeName: [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:16], NSForegroundColorAttributeName : [UIColor colorWithRed:0 green:194./255. blue:1 alpha:1]} range:range];
+						}
 					}
 					
 				} else if ([markup[0] isEqualToString:@"PORTAL"]) {
@@ -763,7 +763,7 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 				start += range.length;
 			}
 
-			[messages addObject:@{@"date": date, @"message": atrstr}];
+			[messages addObject:@{@"date": date, @"message": atrstr, @"mentionsYou": @(mentionsYou)}];
 			
 		}
 		
@@ -781,9 +781,9 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 	//CLLocationCoordinate2D loc = CLLocationCoordinate2DMake(50.639722, 13.829444);
 	
 	NSDictionary *dict = @{
-	@"factionOnly": @(factionOnly),
-	@"message": message,
-	@"playerLocation": [self currentE6Location],
+		@"factionOnly": @(factionOnly),
+		@"message": message,
+		@"playerLocation": self.currentE6Location,
 	};
 	
 	[self sendRequest:@"player/say" params:dict completionHandler:^(id responseObj) {
@@ -876,9 +876,9 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 	//loc = CLLocationCoordinate2DMake(50.639722, 13.829444);
 	
 	NSDictionary *dict = @{
-	@"knobSyncTimestamp": @(0),
-	@"itemGuid": xmpItem.guid,
-	@"playerLocation": [self currentE6Location],
+		@"knobSyncTimestamp": @(self.knobSyncTimestamp),
+		@"itemGuid": xmpItem.guid,
+		@"playerLocation": self.currentE6Location,
 	};
 	
 	[self sendRequest:@"gameplay/fireUntargetedRadialWeapon" params:dict completionHandler:^(id responseObj) {
@@ -934,7 +934,6 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 - (void)persistNickname:(NSString *)nickname completionHandler:(void (^)(NSString *errorStr))handler {
 	
 	[self sendRequest:@"playerUndecorated/persistNickname" params:@[nickname] completionHandler:^(id responseObj) {
-		
 		//NSLog(@"persistNickname: %@", responseObj);
 		
 		dispatch_async(dispatch_get_main_queue(), ^{
@@ -945,14 +944,13 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 	
 }
 
-- (void)chooseFaction:(NSString *)faction completionHandler:(void (^)(void))handler {
+- (void)chooseFaction:(NSString *)faction completionHandler:(void (^)(NSString *errorStr))handler {
 
 	[self sendRequest:@"playerUndecorated/chooseFaction" params:@[faction] completionHandler:^(id responseObj) {
-		
-		NSLog(@"chooseFaction: %@", responseObj);
+		//NSLog(@"chooseFaction: %@", responseObj);
 		
 		dispatch_async(dispatch_get_main_queue(), ^{
-			handler();
+			handler(responseObj[@"error"]);
 		});
 		
 	}];
@@ -979,13 +977,11 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 	
 	NSDictionary *dict = @{
 		@"itemGuid": portal.guid,
-		@"playerLocation": [self currentE6Location],
-		@"knobSyncTimestamp": @(0),
-		//@"energyGlobGuids": @[]
+		@"playerLocation": self.currentE6Location,
+		@"knobSyncTimestamp": @(self.knobSyncTimestamp),
 	};
 	
 	[self sendRequest:@"gameplay/collectItemsFromPortal" params:dict completionHandler:^(id responseObj) {
-		
 		//NSLog(@"hackPortal responseObj: %@", responseObj);
 		
 		if ([responseObj[@"error"] isEqualToString:@"TOO_SOON_BIG"]) {
@@ -1041,16 +1037,14 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 - (void)deployResonator:(Resonator *)resonatorItem toPortal:(Portal *)portal toSlot:(int)slot completionHandler:(void (^)(NSString *errorStr))handler {
 
 	NSDictionary *dict = @{
-	@"knobSyncTimestamp": @(0),
-	@"itemGuids": @[resonatorItem.guid],
-	@"location": [self currentE6Location],
-	@"portalGuid": portal.guid,
-	@"preferredSlot": @(slot)
+		@"knobSyncTimestamp": @(self.knobSyncTimestamp),
+		@"itemGuids": @[resonatorItem.guid],
+		@"playerLocation": self.currentE6Location,
+		@"portalGuid": portal.guid,
+		@"preferredSlot": @(slot)
 	};
 	
-	[self sendRequest:@"gameplay/deployResonatorV2" params:dict completionHandler:^(id responseObj) {
-		
-		//NSLog(@"deployResonator responseObj: %@", responseObj);
+	[self sendRequest:@"gameplay/deployResonatorV2" params:dict completionHandler:^(id responseObj) {		
 
 		if ([responseObj[@"error"] isEqualToString:@"PORTAL_OUT_OF_RANGE"]) {
 			
@@ -1071,6 +1065,7 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 			});
 			
 		} else {
+			//NSLog(@"deployResonator responseObj: %@", responseObj);
 			
 			dispatch_async(dispatch_get_main_queue(), ^{
 				handler(nil);
@@ -1083,16 +1078,13 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 }
 
 - (void)upgradeResonator:(Resonator *)resonatorItem toPortal:(Portal *)portal toSlot:(int)slot completionHandler:(void (^)(NSString *errorStr))handler {
-	
-	//{"params":{"energyGlobGuids":[],"itemGuids":["365e07c2f4bd4ca3ba11f13355b3cfc9.5"],"knobSyncTimestamp":1358000897501,"location":"0304bb25,00d2f8f0","portalGuid":"3e7788cf535745a29461dffcad2c8711.12","preferredSlot":255}}
-	
+
 	NSDictionary *dict = @{
-	@"knobSyncTimestamp": @(0),
-	//@"energyGlobGuids": @[],
-	@"emitterGuid": resonatorItem.guid,
-	@"location": [self currentE6Location],
-	@"portalGuid": portal.guid,
-	@"resonatorSlotToUpgrade": @(slot)
+		@"knobSyncTimestamp": @(self.knobSyncTimestamp),
+		@"emitterGuid": resonatorItem.guid,
+		@"playerLocation": self.currentE6Location,
+		@"portalGuid": portal.guid,
+		@"resonatorSlotToUpgrade": @(slot)
 	};
 	
 	[self sendRequest:@"gameplay/upgradeResonatorV2" params:dict completionHandler:^(id responseObj) {
@@ -1116,7 +1108,6 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 			});
 
 		} else {
-			
 			//NSLog(@"upgradeResonator responseObj: %@", responseObj);
 			
 			dispatch_async(dispatch_get_main_queue(), ^{
@@ -1131,15 +1122,12 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 
 - (void)addMod:(Item *)modItem toItem:(Item *)modableItem toSlot:(int)slot completionHandler:(void (^)(NSString *errorStr))handler {
 	
-	//{"params":{"energyGlobGuids":[],"playerLocation":"0304b436,00d305c9","knobSyncTimestamp":1358097541497,"modResourceGuid":"ef2b59f137654d73b43ecc73c373836c.5","modableGuid":"ca2b7f744e244b70bf0c8d7b65d446cc.11","index":0}}
-	
 	NSDictionary *dict = @{
-	  @"knobSyncTimestamp": @(0),
-	  //@"energyGlobGuids": @[],
-	  @"playerLocation": [self currentE6Location],
-	  @"modResourceGuid": modItem.guid,
-	  @"modableGuid": modableItem.guid,
-	  @"index": @(slot)
+		@"knobSyncTimestamp": @(self.knobSyncTimestamp),
+		@"playerLocation": self.currentE6Location,
+		@"modResourceGuid": modItem.guid,
+		@"modableGuid": modableItem.guid,
+		@"index": @(slot)
 	};
 	
 	[self sendRequest:@"gameplay/addMod" params:dict completionHandler:^(id responseObj) {
@@ -1168,9 +1156,9 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 //	NSLog(@"dropItemWithGuid: %@", guid);
 
 	NSDictionary *dict = @{
-	@"knobSyncTimestamp": @(0),
-	@"playerLocation": [self currentE6Location],
-	@"itemGuid": guid
+		@"knobSyncTimestamp": @(self.knobSyncTimestamp),
+		@"playerLocation": self.currentE6Location,
+		@"itemGuid": guid
 	};
 	
 	[self sendRequest:@"gameplay/dropItem" params:dict completionHandler:^(id responseObj) {
@@ -1188,9 +1176,9 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 - (void)pickUpItemWithGuid:(NSString *)guid completionHandler:(void (^)(NSString *errorStr))handler {
 	
 	NSDictionary *dict = @{
-	@"knobSyncTimestamp": @(0),
-	@"playerLocation": [self currentE6Location],
-	@"itemGuid": guid
+		@"knobSyncTimestamp": @(self.knobSyncTimestamp),
+		@"playerLocation": self.currentE6Location,
+		@"itemGuid": guid
 	};
 	
 	[self sendRequest:@"gameplay/pickUp" params:dict completionHandler:^(id responseObj) {
@@ -1218,13 +1206,13 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 - (void)recycleItem:(Item *)item completionHandler:(void (^)(void))handler {
 
 	NSDictionary *dict = @{
-	  @"knobSyncTimestamp": @(0),
-	  @"playerLocation": [self currentE6Location],
-	  @"itemGuid": item.guid
+		@"knobSyncTimestamp": @(self.knobSyncTimestamp),
+		@"playerLocation": self.currentE6Location,
+		@"itemGuid": item.guid
 	};
 
 	[self sendRequest:@"gameplay/recycleItem" params:dict completionHandler:^(id responseObj) {
-		NSLog(@"recycleItem responseObj: %@", responseObj);
+		//NSLog(@"recycleItem responseObj: %@", responseObj);
 
 		dispatch_async(dispatch_get_main_queue(), ^{
 			handler();
@@ -1237,13 +1225,12 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 - (void)usePowerCube:(PowerCube *)powerCube completionHandler:(void (^)(void))handler {
 
 	NSDictionary *dict = @{
-	  @"knobSyncTimestamp": @(0),
-	  @"playerLocation": [self currentE6Location],
-	  @"itemGuid": powerCube.guid
+		@"knobSyncTimestamp": @(self.knobSyncTimestamp),
+		@"playerLocation": self.currentE6Location,
+		@"itemGuid": powerCube.guid
 	};
 
 	[self sendRequest:@"gameplay/dischargePowerCube" params:dict completionHandler:^(id responseObj) {
-
 		//NSLog(@"dischargePowerCube responseObj: %@", responseObj);
 
 		dispatch_async(dispatch_get_main_queue(), ^{
@@ -1259,11 +1246,11 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 	//{"params":{"energyGlobGuids":[],"knobSyncTimestamp":1358000897501,"location":"0304bb25,00d2f8f0","portalGuid":"3e7788cf535745a29461dffcad2c8711.12","portalKeyGuid":null,"resonatorSlots":[0,5,6,7]}}
 	
 	NSDictionary *dict = @{
-	@"knobSyncTimestamp": @(0),
-	@"location": [self currentE6Location],
-	@"portalGuid": portal.guid,
-	@"portalKeyGuid": [NSNull null],
-	@"resonatorSlots": @[@0, @1, @2, @3, @4, @5, @6, @7]
+		@"knobSyncTimestamp": @(self.knobSyncTimestamp),
+		@"playerLocation": self.currentE6Location,
+		@"portalGuid": portal.guid,
+		@"portalKeyGuid": [NSNull null],
+		@"resonatorSlots": @[@0, @1, @2, @3, @4, @5, @6, @7]
 	};
 	
 	[self sendRequest:@"gameplay/rechargeResonatorsV2" params:dict completionHandler:^(id responseObj) {
@@ -1272,6 +1259,47 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 		
 		dispatch_async(dispatch_get_main_queue(), ^{
 			handler();
+		});
+		
+	}];
+	
+}
+
+- (void)queryLinkabilityForPortal:(Portal *)portal portalKey:(PortalKey *)portalKey completionHandler:(void (^)(NSString *errorStr))handler {
+
+	NSDictionary *dict = @{
+		@"knobSyncTimestamp": @(self.knobSyncTimestamp),
+		@"playerLocation": self.currentE6Location,
+		@"originPortalGuid": portal.guid,
+		@"portalLinkKeyGuidSet": @[portalKey.guid]
+	};
+
+	[self sendRequest:@"gameplay/getLinkabilityImpediment" params:dict completionHandler:^(id responseObj) {
+		//NSLog(@"getLinkabilityImpediment responseObj: %@", responseObj);
+
+		dispatch_async(dispatch_get_main_queue(), ^{
+			handler(responseObj[@"result"][portalKey.guid]);
+		});
+
+	}];
+
+}
+
+- (void)linkPortal:(Portal *)portal withPortalKey:(PortalKey *)portalKey completionHandler:(void (^)(NSString *errorStr))handler {
+
+	NSDictionary *dict = @{
+		@"knobSyncTimestamp": @(self.knobSyncTimestamp),
+		@"playerLocation": self.currentE6Location,
+		@"originPortalGuid": portal.guid,
+		@"destinationPortalGuid": portalKey.portalGuid,
+		@"linkKeyGuid": portalKey.guid
+	};
+
+	[self sendRequest:@"gameplay/createLink" params:dict completionHandler:^(id responseObj) {
+		//NSLog(@"createLink responseObj: %@", responseObj);
+
+		dispatch_async(dispatch_get_main_queue(), ^{
+			handler(nil);
 		});
 		
 	}];
@@ -1297,22 +1325,18 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 		
 		NSMutableDictionary *mutableParams = [params mutableCopy];
 
-		NSArray *energyGlobs = [EnergyGlob MR_findAll];
-		if (energyGlobs.count > [API sharedInstance].numberOfEnergyToCollect) {
-			energyGlobs = [energyGlobs subarrayWithRange:NSMakeRange(0, [API sharedInstance].numberOfEnergyToCollect)];
-		}
-		
 		NSMutableArray *collectedEnergyGuids = [NSMutableArray array];
-		for (EnergyGlob *energyGlob in energyGlobs) {
+		for (EnergyGlob *energyGlob in self.energyToCollect) {
 			[collectedEnergyGuids addObject:energyGlob.guid];
 		}
 		mutableParams[@"energyGlobGuids"] = collectedEnergyGuids;
-		
-		[API sharedInstance].numberOfEnergyToCollect = 0;
-		
-		//NSLog(@"collecting %d energy", collectedEnergyGuids.count);
-		
+		[self.energyToCollect removeAllObjects];
+
 		params = mutableParams;
+		
+		if (collectedEnergyGuids.count > 0) {
+			[[API sharedInstance] playSound:@"SFX_XM_PICKUP"];
+		}
 		
 	}
 
@@ -1323,13 +1347,13 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 	[request setHTTPMethod:@"POST"];
 	
 	NSDictionary *headers = @{
-	@"Content-Type" : @"application/json;charset=UTF-8",
-	@"Accept-Encoding" : @"gzip",
-	@"User-Agent" : @"Nemesis (gzip)",
-	@"X-XsrfToken" : ((self.xsrfToken) ? (self.xsrfToken) : @""),
-	@"Host" : @"m-dot-betaspike.appspot.com",
-	@"Connection" : @"Keep-Alive",
-	@"Cookie" : [NSString stringWithFormat:@"SACSID=%@", ((self.SACSID) ? (self.SACSID) : @"")],
+		@"Content-Type" : @"application/json;charset=UTF-8",
+		@"Accept-Encoding" : @"gzip",
+		@"User-Agent" : @"Nemesis (gzip)",
+		@"X-XsrfToken" : ((self.xsrfToken) ? (self.xsrfToken) : @""),
+		@"Host" : @"m-dot-betaspike.appspot.com",
+		@"Connection" : @"Keep-Alive",
+		@"Cookie" : [NSString stringWithFormat:@"SACSID=%@", ((self.SACSID) ? (self.SACSID) : @"")],
 	};
 	
 	[request setAllHTTPHeaderFields:headers];
@@ -1477,15 +1501,15 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 
 	}
 
-	[[NSManagedObjectContext MR_defaultContext] MR_saveToPersistentStoreWithCompletion:nil];
+	[[NSManagedObjectContext MR_contextForCurrentThread] MR_saveToPersistentStoreWithCompletion:nil];
 
 	//[[NSNotificationCenter defaultCenter] postNotificationName:@"InventoryUpdatedNotification" object:nil];
 	
 }
 
 - (void)processGameEntities:(NSArray *)gameEntities {
-	//NSLog(@"processGameEntities: %@", gameEntities);
-	
+		//NSLog(@"processGameEntities: %@", gameEntities);
+
 	for (NSArray *gameEntity in gameEntities) {
 		NSDictionary *loc = gameEntity[2][@"locationE6"];
 		if (loc && gameEntity[2][@"portalV2"]) {
@@ -1507,7 +1531,7 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 			portal.capturedBy = creator;
 
 			for (int i = 0; i < 8; i++) {
-				
+
 				NSDictionary *resonatorDict = gameEntity[2][@"resonatorArray"][@"resonators"][i];
 
 				DeployedResonator *resonator = [DeployedResonator MR_findFirstWithPredicate:[NSPredicate predicateWithFormat:@"portal = %@ && slot = %d", portal, i]];
@@ -1517,11 +1541,11 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 						[resonator MR_deleteEntity];
 					}
 				} else {
-					
+
 					if ([resonatorDict[@"slot"] intValue] != i) {
 						NSLog(@"%d != %d", [resonatorDict[@"slot"] intValue], i);
 					}
-					
+
 					if (!resonator) { resonator = [DeployedResonator MR_createEntity]; }
 					resonator.portal = portal;
 					resonator.slot = i;
@@ -1535,27 +1559,27 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 					resonator.owner = owner;
 
 					[portal addResonatorsObject:resonator];
-					
+
 				}
-				
+
 			}
-			
-			//NSLog(@"Mods: %@", gameEntity[2][@"portalV2"][@"linkedModArray"]);
-			
+
+				//NSLog(@"Mods: %@", gameEntity[2][@"portalV2"][@"linkedModArray"]);
+
 			for (int i = 0; i < 4; i++) {
-				
+
 				NSDictionary *modDict = gameEntity[2][@"portalV2"][@"linkedModArray"][i];
 
-				
-				
+
+
 				if ([modDict isKindOfClass:[NSNull class]]) {
 					DeployedMod *mod = [DeployedMod MR_findFirstWithPredicate:[NSPredicate predicateWithFormat:@"portal = %@ && slot = %d", portal, i]];
 					if (mod) {
 						[mod MR_deleteEntity];
 					}
-					
+
 				} else {
-					
+
 					if ([modDict[@"type"] isEqualToString:@"RES_SHIELD"]) {
 
 						DeployedShield *shield = [DeployedShield MR_findFirstWithPredicate:[NSPredicate predicateWithFormat:@"portal = %@ && slot = %d", portal, i]];
@@ -1572,50 +1596,50 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 						shield.owner = owner;
 
 						[portal addModsObject:shield];
-						
+
 					} else {
 						NSLog(@"Unknown Mod");
 					}
-					
+
 				}
-				
+
 			}
 
-			//portal.mods = gameEntity[2][@"portalV2"][@"linkedModArray"];
-			
-//			if (![portal.controllingTeam isEqualToString:@"NEUTRAL"] && portal.capturedByGUID) {
-//				[self getNicknameFromUserGUID:portal.capturedByGUID completionHandler:^(NSString *nickname) {
-//					portal.capturedByNickname = nickname;
-//					//[[NSNotificationCenter defaultCenter] postNotificationName:@"PortalChanged" object:self userInfo:@{@"portal": portal}];
-//				}];
-//			}
-			
-//			NSMutableArray *resonators = [gameEntity[2][@"resonatorArray"][@"resonators"] mutableCopy];
-//			portal.resonators = resonators;
-//			
-//			NSMutableArray *mods = [gameEntity[2][@"portalV2"][@"linkedModArray"] mutableCopy];
-//			portal.mods = mods;
-			
-			//[[Portals sharedInstance] addPortal:portal];
+				//portal.mods = gameEntity[2][@"portalV2"][@"linkedModArray"];
+
+				//			if (![portal.controllingTeam isEqualToString:@"NEUTRAL"] && portal.capturedByGUID) {
+				//				[self getNicknameFromUserGUID:portal.capturedByGUID completionHandler:^(NSString *nickname) {
+				//					portal.capturedByNickname = nickname;
+				//					//[[NSNotificationCenter defaultCenter] postNotificationName:@"PortalChanged" object:self userInfo:@{@"portal": portal}];
+				//				}];
+				//			}
+
+				//			NSMutableArray *resonators = [gameEntity[2][@"resonatorArray"][@"resonators"] mutableCopy];
+				//			portal.resonators = resonators;
+				//
+				//			NSMutableArray *mods = [gameEntity[2][@"portalV2"][@"linkedModArray"] mutableCopy];
+				//			portal.mods = mods;
+
+				//[[Portals sharedInstance] addPortal:portal];
 
 		} else if (loc && gameEntity[2][@"resource"]) {
-			
+
 			NSString *resourceType;
-			
+
 			if (gameEntity[2][@"resourceWithLevels"][@"resourceType"]) {
 				resourceType = gameEntity[2][@"resourceWithLevels"][@"resourceType"];
 			}
-			
+
 			if (gameEntity[2][@"resource"][@"resourceType"]) {
 				resourceType = gameEntity[2][@"resource"][@"resourceType"];
 			}
-			
+
 			if (gameEntity[2][@"modResource"][@"resourceType"]) {
 				resourceType = gameEntity[2][@"modResource"][@"resourceType"];
 			}
-			
-			//NSLog(@"Dropped resourceType: %@", resourceType);
-			
+
+				//NSLog(@"Dropped resourceType: %@", resourceType);
+
 			if ([resourceType isEqualToString:@"EMITTER_A"]) {
 				Resonator *resonator = [Resonator MR_findFirstByAttribute:@"guid" withValue:gameEntity[0]];
 				if (!resonator) { resonator = [Resonator MR_createEntity]; }
@@ -1647,7 +1671,7 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 				portal.imageURL = gameEntity[2][@"portalCoupler"][@"portalImageUrl"];
 				portal.name = gameEntity[2][@"portalCoupler"][@"portalTitle"];
 				portal.address = gameEntity[2][@"portalCoupler"][@"portalAddress"];
-				
+
 				PortalKey *portalKey = [PortalKey MR_findFirstByAttribute:@"guid" withValue:gameEntity[0]];
 				if (!portalKey) { portalKey = [PortalKey MR_createEntity]; }
 				portalKey.guid = gameEntity[0];
@@ -1683,12 +1707,10 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 				itemObj.latitude = [loc[@"latE6"] intValue]/1E6;
 				itemObj.longitude = [loc[@"lngE6"] intValue]/1E6;
 			}
-			
-			//DroppedItem *droppedItem = [[DB sharedInstance] getOrCreateItemWithGuid:gameEntity[0] classStr:@"DroppedItem"];
-			
+
 		} else if (gameEntity[2][@"edge"]) {
-			
-			//NSLog(@"link: %@", gameEntity[0]);
+
+				//NSLog(@"link: %@", gameEntity[0]);
 
 			PortalLink *portalLink = [PortalLink MR_findFirstByAttribute:@"guid" withValue:gameEntity[0]];
 			if (!portalLink) { portalLink = [PortalLink MR_createEntity]; }
@@ -1699,7 +1721,7 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 			if (!creator) { creator = [User MR_createEntity]; }
 			creator.guid = gameEntity[2][@"creator"][@"creatorGuid"];
 			portalLink.creator = creator;
-			
+
 			Portal *destinationPortal = [Portal MR_findFirstByAttribute:@"guid" withValue:gameEntity[2][@"edge"][@"destinationPortalGuid"]];
 			if (!destinationPortal) { destinationPortal = [Portal MR_createEntity]; }
 			destinationPortal.guid = gameEntity[2][@"edge"][@"destinationPortalGuid"];
@@ -1707,7 +1729,7 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 			destinationPortal.latitude = [gameEntity[2][@"edge"][@"destinationPortalLocation"][@"latE6"] intValue]/1E6;
 			destinationPortal.longitude = [gameEntity[2][@"edge"][@"destinationPortalLocation"][@"lngE6"] intValue]/1E6;
 			portalLink.destinationPortal = destinationPortal;
-			
+
 			Portal *originPortal = [Portal MR_findFirstByAttribute:@"guid" withValue:gameEntity[2][@"edge"][@"originPortalGuid"]];
 			if (!originPortal) { originPortal = [Portal MR_createEntity]; }
 			originPortal.guid = gameEntity[2][@"edge"][@"originPortalGuid"];
@@ -1715,22 +1737,22 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 			originPortal.latitude = [gameEntity[2][@"edge"][@"originPortalLocation"][@"latE6"] intValue]/1E6;
 			originPortal.longitude = [gameEntity[2][@"edge"][@"originPortalLocation"][@"lngE6"] intValue]/1E6;
 			portalLink.originPortal = originPortal;
-			
+
 		} else if (gameEntity[2][@"capturedRegion"]) {
-			
-			//NSLog(@"capturedRegion: %@", gameEntity[0]);
+
+				//NSLog(@"capturedRegion: %@", gameEntity[0]);
 
 			ControlField *controlField = [ControlField MR_findFirstByAttribute:@"guid" withValue:gameEntity[0]];
 			if (!controlField) { controlField = [ControlField MR_createEntity]; }
 			controlField.guid = gameEntity[0];
 			controlField.controllingTeam = gameEntity[2][@"controllingTeam"][@"team"];
 			controlField.entityScore = [gameEntity[2][@"entityScore"][@"entityScore"] intValue];
-			
+
 			User *creator = [User MR_findFirstByAttribute:@"guid" withValue:gameEntity[2][@"creator"][@"creatorGuid"]];
 			if (!creator) { creator = [User MR_createEntity]; }
 			creator.guid = gameEntity[2][@"creator"][@"creatorGuid"];
 			controlField.creator = creator;
-			
+
 			Portal *portalA = [Portal MR_findFirstByAttribute:@"guid" withValue:gameEntity[2][@"capturedRegion"][@"vertexA"][@"guid"]];
 			if (!portalA) { portalA = [Portal MR_createEntity]; }
 			portalA.guid = gameEntity[2][@"capturedRegion"][@"vertexA"][@"guid"];
@@ -1738,7 +1760,7 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 			portalA.latitude = [gameEntity[2][@"capturedRegion"][@"vertexA"][@"location"][@"latE6"] intValue]/1E6;
 			portalA.longitude = [gameEntity[2][@"capturedRegion"][@"vertexA"][@"location"][@"lngE6"] intValue]/1E6;
 			[controlField addPortalsObject:portalA];
-			
+
 			Portal *portalB = [Portal MR_findFirstByAttribute:@"guid" withValue:gameEntity[2][@"capturedRegion"][@"vertexB"][@"guid"]];
 			if (!portalB) { portalB = [Portal MR_createEntity]; }
 			portalB.guid = gameEntity[2][@"capturedRegion"][@"vertexB"][@"guid"];
@@ -1746,7 +1768,7 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 			portalB.latitude = [gameEntity[2][@"capturedRegion"][@"vertexB"][@"location"][@"latE6"] intValue]/1E6;
 			portalB.longitude = [gameEntity[2][@"capturedRegion"][@"vertexB"][@"location"][@"lngE6"] intValue]/1E6;
 			[controlField addPortalsObject:portalB];
-			
+
 			Portal *portalC = [Portal MR_findFirstByAttribute:@"guid" withValue:gameEntity[2][@"capturedRegion"][@"vertexC"][@"guid"]];
 			if (!portalC) { portalC = [Portal MR_createEntity]; }
 			portalC.guid = gameEntity[2][@"capturedRegion"][@"vertexC"][@"guid"];
@@ -1771,11 +1793,11 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 	}
 
 	if ([self.playerInfo[@"energy"] intValue] != [playerEntity[2][@"playerPersonal"][@"energy"] intValue]) {
-		int xm = (int)round(([playerEntity[2][@"playerPersonal"][@"energy"] floatValue]/[API maxXmForLevel:newLevel])*100);
+		int xmPercent = (int)round(([playerEntity[2][@"playerPersonal"][@"energy"] floatValue]/[API maxXmForLevel:newLevel])*100);
 
 		NSMutableArray *sounds = [NSMutableArray arrayWithCapacity:4];
 		[sounds addObject:@"SPEECH_XM_LEVELS"];
-		[sounds addObjectsFromArray:[API soundsForNumber:xm]];
+		[sounds addObjectsFromArray:[API soundsForNumber:xmPercent]];
 		[sounds addObject:@"SPEECH_PERCENT"];
 
 		dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC));
@@ -1784,23 +1806,26 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 		});
 
 	}
+
+	self.playerInfo = [@{
+		@"nickname": self.playerInfo[@"nickname"],
+		@"team": playerEntity[2][@"controllingTeam"][@"team"],
+		@"ap": playerEntity[2][@"playerPersonal"][@"ap"],
+		@"energy": playerEntity[2][@"playerPersonal"][@"energy"],
+		@"allowNicknameEdit": playerEntity[2][@"playerPersonal"][@"allowNicknameEdit"],
+		@"allowFactionChoice": playerEntity[2][@"playerPersonal"][@"allowFactionChoice"],
+		@"shouldSendEmail": playerEntity[2][@"playerPersonal"][@"notificationSettings"][@"shouldSendEmail"],
+		@"maySendPromoEmail": playerEntity[2][@"playerPersonal"][@"notificationSettings"][@"maySendPromoEmail"],
+	} mutableCopy];
 	
-	self.playerInfo = @{
-	@"nickname": self.playerInfo[@"nickname"],
-	@"team": playerEntity[2][@"controllingTeam"][@"team"],
-	@"ap": playerEntity[2][@"playerPersonal"][@"ap"],
-	@"energy": playerEntity[2][@"playerPersonal"][@"energy"]
-	};
-	
-	//[[NSNotificationCenter defaultCenter] postNotificationName:@"ProfileUpdatedNotification" object:nil];
+	[[NSNotificationCenter defaultCenter] postNotificationName:@"ProfileUpdatedNotification" object:nil];
 	
 }
 
 - (void)processEnergyGlobGuids:(NSArray *)energyGlobGuids {
 	//NSLog(@"processEnergyGlobGuids: %d", energyGlobGuids.count);
 	for (NSString *energyGlobGuid in energyGlobGuids) {
-		EnergyGlob *energyGlob = [EnergyGlob MR_findFirstByAttribute:@"guid" withValue:energyGlobGuid];
-		if (!energyGlob) { energyGlob = [EnergyGlob MR_createEntity]; }
+		EnergyGlob *energyGlob = [EnergyGlob MR_createEntity];
 		energyGlob.guid = energyGlobGuid;
 
 		NSScanner *scanner = [NSScanner scannerWithString:[energyGlobGuid substringToIndex:16]]; //19
@@ -1810,7 +1835,7 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 		energyGlob.latitude = coord.latitude;
 		energyGlob.longitude = coord.longitude;
 	}
-	[[NSManagedObjectContext MR_defaultContext] MR_saveToPersistentStoreWithCompletion:nil];
+	[[NSManagedObjectContext MR_contextForCurrentThread] MR_saveToPersistentStoreWithCompletion:nil];
 }
 
 - (void)processAPGains:(NSArray *)apGains {
@@ -1846,7 +1871,7 @@ green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/
 			[item MR_deleteEntity];
 		}
 	}
-	[[NSManagedObjectContext MR_defaultContext] MR_saveToPersistentStoreWithCompletion:nil];
+	[[NSManagedObjectContext MR_contextForCurrentThread] MR_saveToPersistentStoreWithCompletion:nil];
 }
 
 @end
