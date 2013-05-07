@@ -74,9 +74,11 @@
 	
 	//NSLog(@"messages[indexPath.row]: %@", messages[indexPath.row]);
 
-	cell.timeLabel.font = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:12];
+	cell.timeLabel.font = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:10];
 	cell.timeLabel.text = [dateFormatter stringFromDate:_messages[indexPath.row][@"date"]];
-	
+
+	[cell setMentionsYou:[_messages[indexPath.row][@"mentionsYou"] boolValue]];
+
 	//cell.messageLabel.font = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:15];
 	cell.messageLabel.attributedText = _messages[indexPath.row][@"message"];
 	cell.messageLabel.numberOfLines = 0;

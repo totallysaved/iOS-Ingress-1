@@ -8,6 +8,7 @@
 
 #import "PortalInfoViewController.h"
 #import <SDWebImage/UIImageView+WebCache.h>
+#import "PortalKeysViewController.h"
 
 @implementation PortalInfoViewController
 
@@ -80,8 +81,7 @@
 	
 	//int part1len = str.length;
 	
-	User *user = nil;
-//	User *user = [[DB sharedInstance] userWhoCapturedPortal:self.portal];
+	User *user = self.portal.capturedBy;
 	NSString *nickname = user.nickname;
 	if (!nickname) { nickname = [API factionStrForFaction:self.portal.controllingTeam]; }
 	[str appendFormat:@"%@", nickname];
@@ -256,6 +256,15 @@
 	
 	[self performSegueWithIdentifier:@"PortalLinkPushKeysSegue" sender:self];
 	
+}
+
+#pragma mark - Storyboard
+
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+	if ([segue.identifier isEqualToString:@"PortalLinkPushKeysSegue"]) {
+		PortalKeysViewController *vc = segue.destinationViewController;
+		vc.linkingPortal = self.portal;
+	}
 }
 
 @end

@@ -8,6 +8,7 @@
 
 #import "ScannerViewController.h"
 #import "PortalDetailViewController.h"
+#import "MissionViewController.h"
 #import "MKMapView+ZoomLevel.h"
 
 #import "PortalOverlayView.h"
@@ -25,38 +26,31 @@
 	CLLocationManager *locationManager;
 	CLLocation *lastLocation;
 	BOOL firstRefreshProfile;
+	BOOL firstLocationUpdate;
+	BOOL portalDetailSegue;
+	MBProgressHUD *locationAllowHUD;
 }
 
 - (void)viewDidLoad {
     [super viewDidLoad];
 
+	[[AppDelegate instance] setMapView:_mapView];
+
 	levelLabel.font = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:32];
 	nicknameLabel.font = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:20];
+	apLabel.font = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:20];
+	xmLabel.font = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:20];
+
+	apLabel.hidden = YES;
+	xmLabel.hidden = YES;
+	apLabel.alpha = 0;
+	xmLabel.alpha = 0;
+
 	firstRefreshProfile = YES;
+	firstLocationUpdate = YES;
 
 	[xmIndicator setProgressImage:[[UIImage imageNamed:@"progressImage-aliens.png"] resizableImageWithCapInsets:UIEdgeInsetsMake(7, 7, 7, 7)]];
 	[xmIndicator setTrackImage:[[UIImage imageNamed:@"trackImage.png"] resizableImageWithCapInsets:UIEdgeInsetsMake(2, 2, 2, 2)]];
-
-//	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(managedObjectContextObjectsDidChange:) name:NSManagedObjectContextObjectsDidChangeNotification object:nil];
-
-	locationManager = [[CLLocationManager alloc] init];
-    locationManager.delegate = self;
-    locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation;
-	
-	[locationManager startUpdatingLocation];
-	[locationManager startUpdatingHeading];
-
-	if (YES) { // TODO: Free moving allowed for debug only
-		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^(void){
-			[locationManager stopUpdatingLocation];
-			[_mapView setScrollEnabled:YES];
-		});
-	}
-
-	[[AppDelegate instance] setMapView:_mapView];
-
-	UIPinchGestureRecognizer *recognizer = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(handlePinch:)];
-	[_mapView addGestureRecognizer:recognizer];
 
 	rangeCircleView = [UIView new];
 	rangeCircleView.frame = CGRectMake(0, 0, 0, 0);
@@ -72,35 +66,38 @@
 
 	[NSTimer scheduledTimerWithTimeInterval:.01 target:self selector:@selector(updateCircle) userInfo:nil repeats:YES];
 
-//	if ([CLLocationManager authorizationStatus] != kCLAuthorizationStatusAuthorized) {
-//#warning location
-//		[_mapView setHidden:YES];
-//		MBProgressHUD *HUD = [[MBProgressHUD alloc] initWithView:self.view];
-//		HUD.userInteractionEnabled = NO;
-//		HUD.mode = MBProgressHUDModeCustomView;
-//		HUD.customView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"warning.png"]];
-//		HUD.labelText = @"Please allow location services";
-//		HUD.labelFont = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:16];
-//		[self.view addSubview:HUD];
-//		[HUD show:YES];
-//	}
+	locationManager = [[CLLocationManager alloc] init];
+    locationManager.delegate = self;
+    locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation;
+	
+	[locationManager startUpdatingLocation];
+//	[locationManager startUpdatingHeading];
 
-//	UITapGestureRecognizer *mapViewGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(mapTapped:)];
-//	[_mapView addGestureRecognizer:mapViewGestureRecognizer];
+	UIPinchGestureRecognizer *recognizer = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(handlePinch:)];
+	[_mapView addGestureRecognizer:recognizer];
+
+#warning Manual scrolling for debug purposes only!
+	UITapGestureRecognizer *mapViewTapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(mapTapped:)];
+	mapViewTapGestureRecognizer.numberOfTapsRequired = 2;
+	[_mapView addGestureRecognizer:mapViewTapGestureRecognizer];
+
+	UILongPressGestureRecognizer *mapViewLognPressGestureRecognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(mapLongPress:)];
+	[_mapView addGestureRecognizer:mapViewLognPressGestureRecognizer];
 
 }
 
 - (void)viewWillAppear:(BOOL)animated {
 	[super viewWillAppear:animated];
+
+	[self.navigationController setNavigationBarHidden:YES animated:YES];
+
+	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(managedObjectContextObjectsDidChange:) name:NSManagedObjectContextObjectsDidChangeNotification object:nil];
 	
-//	[[NSNotificationCenter defaultCenter] addObserverForName:@"ProfileUpdatedNotification" object:nil queue:[[API sharedInstance] notificationQueue] usingBlock:^(NSNotification *note) {
-//		//NSLog(@"ProfileUpdatedNotification");
-//		dispatch_async(dispatch_get_main_queue(), ^{
-//			[self refreshProfile];
-//		});
-//	}];
-	
-//	[[DB sharedInstance] addPortalsToMapView];
+	[[NSNotificationCenter defaultCenter] addObserverForName:@"ProfileUpdatedNotification" object:nil queue:[[API sharedInstance] notificationQueue] usingBlock:^(NSNotification *note) {
+		dispatch_async(dispatch_get_main_queue(), ^{
+			[self refreshProfile];
+		});
+	}];
 
 	[self refreshProfile];
 
@@ -117,13 +114,25 @@
 //	transform = CATransform3DScale(transform, 2, 2, 2);
 //	layer.transform = transform;
 //	layer.shouldRasterize = YES;
+
+	if ([[[API sharedInstance] playerInfo][@"allowFactionChoice"] boolValue]) {
+		[self performSegueWithIdentifier:@"FactionChooseSegue" sender:self];
+	}
 	
+}
+
+- (void)viewWillDisappear:(BOOL)animated {
+	[super viewWillDisappear:animated];
+
+	if (portalDetailSegue) {
+		[self.navigationController setNavigationBarHidden:NO animated:YES];
+	}
 }
 
 - (void)viewDidDisappear:(BOOL)animated {
 	[super viewDidDisappear:animated];
 	
-//	[[NSNotificationCenter defaultCenter] removeObserver:self];
+	[[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
 - (void)didReceiveMemoryWarning {
@@ -133,7 +142,7 @@
 
 #pragma mark - Data Refresh
 
-- (IBAction)refresh {
+- (void)refresh {
 
 //	[MagicalRecord saveWithBlock:^(NSManagedObjectContext *localContext) {
 //		[ControlField MR_truncateAllInContext:localContext];
@@ -153,6 +162,10 @@
 	[DeployedResonator MR_truncateAll];
 	[DeployedMod MR_truncateAll];
 
+	[_mapView removeAnnotations:_mapView.annotations];
+	[_mapView removeOverlays:_mapView.overlays];
+	[_mapView addOverlay:[ColorOverlay new]];
+
 	__block MBProgressHUD *HUD = [[MBProgressHUD alloc] initWithView:self.view];
 	HUD.userInteractionEnabled = YES;
 	HUD.dimBackground = YES;
@@ -161,74 +174,7 @@
 	[HUD show:YES];
 
 	[[API sharedInstance] getObjectsWithCompletionHandler:^{
-
-		////////////////////////
-
-		NSMutableArray *annotationsToRemove = [_mapView.annotations mutableCopy];
-		[annotationsToRemove removeObject:_mapView.userLocation];
-		[_mapView removeAnnotations:annotationsToRemove];
-
-		[_mapView removeOverlays:_mapView.overlays];
-
-		////////////////////////
-
-		//[mapView addOverlay:[ColorOverlay new]];
-
-		NSArray *fetchedFields = [ControlField MR_findAll];
-		for (ControlField *controlField in fetchedFields) {
-			dispatch_async(dispatch_get_main_queue(), ^{
-				[_mapView addOverlay:controlField.polygon];
-			});
-		}
-
-		NSArray *fetchedLinks = [PortalLink MR_findAll];
-		for (PortalLink *portalLink in fetchedLinks) {
-			dispatch_async(dispatch_get_main_queue(), ^{
-				[_mapView addOverlay:portalLink.polyline];
-			});
-		}
-
-		NSArray *fetchedItems = [Item MR_findAllWithPredicate:[NSPredicate predicateWithFormat:@"dropped = YES"]];
-		for (Item *item in fetchedItems) {
-			//NSLog(@"adding item to map: %@ (%f, %f)", item, item.latitude, item.longitude);
-			if (item.coordinate.latitude == 0 && item.coordinate.longitude == 0) { continue; }
-			dispatch_async(dispatch_get_main_queue(), ^{
-				[_mapView addAnnotation:item];
-			});
-		}
-
-		NSArray *fetchedXM = [EnergyGlob MR_findAll];
-		for (EnergyGlob *xm in fetchedXM) {
-			//NSLog(@"adding item to map: %@ (%f, %f)", item, item.latitude, item.longitude);
-			if (xm.coordinate.latitude == 0 && xm.coordinate.longitude == 0) { continue; }
-			dispatch_async(dispatch_get_main_queue(), ^{
-				[_mapView addOverlay:xm.circle];
-			});
-		}
-
-		NSArray *fetchedPortals = [Portal MR_findAllWithPredicate:[NSPredicate predicateWithFormat:@"completeInfo = YES"]];
-		for (Portal *portal in fetchedPortals) {
-			//NSLog(@"adding portal to map: %@ (%f, %f)", portal.subtitle, portal.latitude, portal.longitude);
-			if (portal.coordinate.latitude == 0 && portal.coordinate.longitude == 0) { continue; }
-			dispatch_async(dispatch_get_main_queue(), ^{
-				[_mapView addAnnotation:portal];
-				//[_mapView addOverlay:portal];
-			});
-		}
-
-		NSArray *fetchedResonators = [DeployedResonator MR_findAll];
-		for (DeployedResonator *resonator in fetchedResonators) {
-			//NSLog(@"adding resonator to map: %@ (%f, %f)", resonator, resonator.coordinate.latitude, resonator.coordinate.longitude);
-			if (resonator.portal.coordinate.latitude == 0 && resonator.portal.coordinate.longitude == 0) { continue; }
-			dispatch_async(dispatch_get_main_queue(), ^{
-				[_mapView addOverlay:resonator.circle];
-			});
-		}
-
-		////////////////////////
-
 		[HUD hide:YES];
-
 	}];
 
 }
@@ -239,20 +185,21 @@
 
 	int ap = [playerInfo[@"ap"] intValue];
 	int level = [API levelForAp:ap];
-	int lvlImg = [API levelImageForAp:ap];
+	int maxAp = [API maxApForLevel:level];
 	float energy = [playerInfo[@"energy"] floatValue];
 	float maxEnergy = [API maxXmForLevel:level];
+
+	[apLabel setText:[NSString stringWithFormat:@"%d AP", ap]];
+	[xmLabel setText:[NSString stringWithFormat:@"%d XM", (int)energy]];
 
 	NSMutableParagraphStyle *pStyle = [NSMutableParagraphStyle new];
     pStyle.alignment = NSTextAlignmentRight;
 
 	UIColor *teamColor = [API colorForFaction:playerInfo[@"team"]];
-
-	if ([playerInfo[@"team"] isEqualToString:@"ALIENS"]) {
-		levelImage.image = [UIImage imageNamed:[NSString stringWithFormat:@"ap_icon_enl_%d.png", lvlImg]];
-	} else {
-		levelImage.image = [UIImage imageNamed:[NSString stringWithFormat:@"ap_icon_hum_%d.png", lvlImg]];
-	}
+	
+	[apView setFaction:playerInfo[@"team"]];
+	NSArray *maxAPs = @[@0, @10000, @30000, @70000, @150000, @300000, @600000, @1200000, @(INFINITY)];
+	[apView setProgress:(maxAp == 0 ? 0 : ((ap - [maxAPs[level - 1] floatValue]) / ([maxAPs[level] floatValue] - [maxAPs[level - 1] floatValue])))];
 
 	levelLabel.text = [NSString stringWithFormat:@"%d", level];
 
@@ -271,133 +218,166 @@
 
 }
 
+#pragma mark - IBActions
+
+- (IBAction)showAP {
+	if (apLabel.hidden) {
+		[[SoundManager sharedManager] playSound:@"Sound/sfx_ui_success.aif"];
+		
+		[apLabel setHidden:NO];
+		[UIView animateWithDuration:.5 animations:^{
+			[apLabel setAlpha:1];
+		}];
+		[UIView animateWithDuration:.5 delay:2 options:0 animations:^{
+			[apLabel setAlpha:0];
+		} completion:^(BOOL finished) {
+			[apLabel setHidden:YES];
+		}];
+	}
+}
+
+- (IBAction)showXM {
+	if (xmLabel.hidden) {
+		[[SoundManager sharedManager] playSound:@"Sound/sfx_ui_success.aif"];
+
+		[xmLabel setHidden:NO];
+		[UIView animateWithDuration:.5 animations:^{
+			[xmLabel setAlpha:1];
+		}];
+		[UIView animateWithDuration:.5 delay:2 options:0 animations:^{
+			[xmLabel setAlpha:0];
+		} completion:^(BOOL finished) {
+			[xmLabel setHidden:YES];
+		}];
+	}
+}
+
 #pragma mark - NSManagedObjectContext Did Change
 
 - (void)managedObjectContextObjectsDidChange:(NSNotification *)notification {
 
-	dispatch_async(dispatch_get_main_queue(), ^{
-		for (NSManagedObject *object in notification.userInfo[NSDeletedObjectsKey]) {
-			if ([object isKindOfClass:[Portal class]]) {
-				Portal *portal = (Portal *)object;
-				[_mapView removeAnnotation:portal];
+//	dispatch_async(dispatch_get_main_queue(), ^{
+//		for (NSManagedObject *object in notification.userInfo[NSDeletedObjectsKey]) {
+//			if ([object isKindOfClass:[Portal class]]) {
+//				Portal *portal = (Portal *)object;
+////				[_mapView removeAnnotation:portal];
 //				[_mapView removeOverlay:portal];
-			} else if ([object isKindOfClass:[EnergyGlob class]]) {
-				EnergyGlob *xm = (EnergyGlob *)object;
-				[_mapView removeOverlay:xm.circle];
-			} else if ([object isKindOfClass:[Item class]]) {
-				Item *item = (Item *)object;
-				[_mapView removeAnnotation:item];
-			} else if ([object isKindOfClass:[PortalLink class]]) {
-				PortalLink *portalLink = (PortalLink *)object;
-				[_mapView removeOverlay:portalLink.polyline];
-			} else if ([object isKindOfClass:[ControlField class]]) {
-				ControlField *controlField = (ControlField *)object;
-				[_mapView removeOverlay:controlField.polygon];
-			} else if ([object isKindOfClass:[DeployedResonator class]]) {
-				DeployedResonator *resonator = (DeployedResonator *)object;
-				[_mapView removeOverlay:resonator.circle];
-			}
-		}
+//			} else if ([object isKindOfClass:[EnergyGlob class]]) {
+//				EnergyGlob *xm = (EnergyGlob *)object;
+//				[_mapView removeOverlay:xm.circle];
+//			} else if ([object isKindOfClass:[Item class]]) {
+//				Item *item = (Item *)object;
+//				[_mapView removeAnnotation:item];
+//			} else if ([object isKindOfClass:[PortalLink class]]) {
+//				PortalLink *portalLink = (PortalLink *)object;
+//				[_mapView removeOverlay:portalLink.polyline];
+//			} else if ([object isKindOfClass:[ControlField class]]) {
+//				ControlField *controlField = (ControlField *)object;
+//				[_mapView removeOverlay:controlField.polygon];
+//			} else if ([object isKindOfClass:[DeployedResonator class]]) {
+//				DeployedResonator *resonator = (DeployedResonator *)object;
+//				[_mapView removeOverlay:resonator.circle];
+//			}
+//		}
 
-		for (NSManagedObject *object in notification.userInfo[NSInsertedObjectsKey]) {
-			if ([object isKindOfClass:[Portal class]]) {
-				Portal *portal = (Portal *)object;
-				[_mapView addAnnotation:portal];
-//				[_mapView addOverlay:portal];
-			} else if ([object isKindOfClass:[EnergyGlob class]]) {
-				EnergyGlob *xm = (EnergyGlob *)object;
-				[_mapView addOverlay:xm.circle];
-			} else if ([object isKindOfClass:[Item class]]) {
-				Item *item = (Item *)object;
-				[_mapView addAnnotation:item];
-			} else if ([object isKindOfClass:[PortalLink class]]) {
-				PortalLink *portalLink = (PortalLink *)object;
-				[_mapView addOverlay:portalLink.polyline];
-			} else if ([object isKindOfClass:[ControlField class]]) {
-				ControlField *controlField = (ControlField *)object;
-				[_mapView addOverlay:controlField.polygon];
-			} else if ([object isKindOfClass:[DeployedResonator class]]) {
-				DeployedResonator *resonator = (DeployedResonator *)object;
-				[_mapView addOverlay:resonator.circle];
-			}
+	NSArray *insertedObject = [notification.userInfo[NSInsertedObjectsKey] allObjects];
+	for (NSManagedObject *object in insertedObject) {
+		if ([object isKindOfClass:[Portal class]]) {
+			Portal *portal = (Portal *)object;
+			[_mapView addOverlay:portal];
+			[_mapView addAnnotation:portal];
+		} else if ([object isKindOfClass:[EnergyGlob class]]) {
+			EnergyGlob *xm = (EnergyGlob *)object;
+			[_mapView addOverlay:xm.circle];
+		} else if ([object isKindOfClass:[Item class]]) {
+			Item *item = (Item *)object;
+			[_mapView addAnnotation:item];
+		} else if ([object isKindOfClass:[PortalLink class]]) {
+			PortalLink *portalLink = (PortalLink *)object;
+			[_mapView addOverlay:portalLink.polyline];
+		} else if ([object isKindOfClass:[ControlField class]]) {
+			ControlField *controlField = (ControlField *)object;
+			[_mapView addOverlay:controlField.polygon];
+		} else if ([object isKindOfClass:[DeployedResonator class]]) {
+			DeployedResonator *resonator = (DeployedResonator *)object;
+			[_mapView addOverlay:resonator.circle];
 		}
+	}
 
-		for (NSManagedObject *object in notification.userInfo[NSUpdatedObjectsKey]) {
-			if ([object isKindOfClass:[Portal class]]) {
-				Portal *portal = (Portal *)object;
-				[_mapView removeAnnotation:portal];
-				[_mapView addAnnotation:portal];
-//				[_mapView removeOverlay:portal];
-//				[_mapView addOverlay:portal];
-			} else if ([object isKindOfClass:[EnergyGlob class]]) {
-				EnergyGlob *xm = (EnergyGlob *)object;
-				[_mapView removeOverlay:xm.circle];
-				[_mapView addOverlay:xm.circle];
-			} else if ([object isKindOfClass:[Item class]]) {
-				Item *item = (Item *)object;
-				[_mapView removeAnnotation:item];
-				[_mapView addAnnotation:item];
-			} else if ([object isKindOfClass:[PortalLink class]]) {
-				PortalLink *portalLink = (PortalLink *)object;
-				[_mapView removeOverlay:portalLink.polyline];
-				[_mapView addOverlay:portalLink.polyline];
-			} else if ([object isKindOfClass:[ControlField class]]) {
-				ControlField *controlField = (ControlField *)object;
-				[_mapView removeOverlay:controlField.polygon];
-				[_mapView addOverlay:controlField.polygon];
-			} else if ([object isKindOfClass:[DeployedResonator class]]) {
-				DeployedResonator *resonator = (DeployedResonator *)object;
-				[_mapView removeOverlay:resonator.circle];
-				[_mapView addOverlay:resonator.circle];
-			}
+	NSArray *updatedObject = [notification.userInfo[NSUpdatedObjectsKey] allObjects];
+	for (NSManagedObject *object in updatedObject) {
+		if ([object isKindOfClass:[Portal class]]) {
+			Portal *portal = (Portal *)object;
+			[_mapView addOverlay:portal];
+			[_mapView addAnnotation:portal];
+		} else if ([object isKindOfClass:[EnergyGlob class]]) {
+			EnergyGlob *xm = (EnergyGlob *)object;
+			[_mapView addOverlay:xm.circle];
+		} else if ([object isKindOfClass:[Item class]]) {
+			Item *item = (Item *)object;
+			[_mapView addAnnotation:item];
+		} else if ([object isKindOfClass:[PortalLink class]]) {
+			PortalLink *portalLink = (PortalLink *)object;
+			[_mapView addOverlay:portalLink.polyline];
+		} else if ([object isKindOfClass:[ControlField class]]) {
+			ControlField *controlField = (ControlField *)object;
+			[_mapView addOverlay:controlField.polygon];
+		} else if ([object isKindOfClass:[DeployedResonator class]]) {
+			DeployedResonator *resonator = (DeployedResonator *)object;
+			[_mapView addOverlay:resonator.circle];
 		}
-	});
+	}
 
 }
 
-#pragma mark - Pinch Gesture
-
-- (void)handlePinch:(UIPinchGestureRecognizer*)recognizer {
-    static MKCoordinateRegion originalRegion;
-    if (recognizer.state == UIGestureRecognizerStateBegan) {
-        originalRegion = _mapView.region;
-    }
-
-    double latdelta = originalRegion.span.latitudeDelta / recognizer.scale;
-    double londelta = originalRegion.span.longitudeDelta / recognizer.scale;
-    MKCoordinateSpan span = MKCoordinateSpanMake(latdelta, londelta);
-
-    [_mapView setRegion:MKCoordinateRegionMake(originalRegion.center, span) animated:NO];
-}
-
-#pragma mark - Circle
+#pragma mark - Update
 
 - (void)updateCircle {
-	CGFloat diameter = 100/((_mapView.region.span.latitudeDelta * 111200) / _mapView.bounds.size.width);
-	rangeCircleView.frame = CGRectMake(0, 0, diameter, diameter);
-	rangeCircleView.center = _mapView.center;
-	rangeCircleView.layer.cornerRadius = diameter/2;
-}
 
-//#pragma mark - KVO
-//
-//- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
-//	
-//	if ([object isEqual:_mapView.userLocation] && [keyPath isEqualToString:@"location"]) {
-//		MKCoordinateRegion region = MKCoordinateRegionMakeWithDistance(_mapView.centerCoordinate, 200, 200);
-//		if (!isnan(region.center.latitude)) {
-//			[_mapView setCenterCoordinate:_mapView.userLocation.location.coordinate animated:YES];
-//			[_mapView setRegion:region animated:YES];
-//			[_mapView.userLocation removeObserver:self forKeyPath:@"location"];
-//		}
-//	}
-//	
-//}
+	//[CLLocationManager authorizationStatus] != kCLAuthorizationStatusAuthorized
+	if (![CLLocationManager locationServicesEnabled]) {
+		if (!locationAllowHUD) {
+			_mapView.hidden = YES;
+			rangeCircleView.hidden = YES;
+			playerArrowImage.hidden = YES;
+			locationAllowHUD = [[MBProgressHUD alloc] initWithView:self.view];
+			locationAllowHUD.userInteractionEnabled = NO;
+			locationAllowHUD.mode = MBProgressHUDModeCustomView;
+			locationAllowHUD.customView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"warning.png"]];
+			locationAllowHUD.labelText = @"Please allow location services";
+			locationAllowHUD.labelFont = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:16];
+			locationAllowHUD.removeFromSuperViewOnHide = YES;
+			__weak __block typeof(locationAllowHUD) weakLocationAllowHUD = locationAllowHUD;
+			locationAllowHUD.completionBlock = ^{
+				weakLocationAllowHUD = nil;
+			};
+			[self.view addSubview:locationAllowHUD];
+			[locationAllowHUD show:YES];
+		}
+	} else {
+		if (locationAllowHUD) {
+			[locationAllowHUD hide:YES];
+			_mapView.hidden = NO;
+			rangeCircleView.hidden = NO;
+			playerArrowImage.hidden = NO;
+		} else {
+			CGFloat diameter = 0.;
+			if (_mapView.bounds.size.width > 0) {
+				diameter = 100/((_mapView.region.span.latitudeDelta * 111200) / _mapView.bounds.size.width);
+			}
+			rangeCircleView.frame = CGRectMake(0, 0, diameter, diameter);
+			rangeCircleView.center = _mapView.center;
+			rangeCircleView.layer.cornerRadius = diameter/2;
+		}
+	}
+
+}
 
 #pragma mark - CLLocationManagerDelegate
 
 - (void)locationManager:(CLLocationManager *)manager didUpdateToLocation:(CLLocation *)newLocation fromLocation:(CLLocation *)oldLocation {
-	[_mapView setCenterCoordinate:newLocation.coordinate animated:YES];
+	[_mapView setCenterCoordinate:newLocation.coordinate animated:!firstLocationUpdate];
+	if (firstLocationUpdate) firstLocationUpdate = NO;
 }
 
 - (BOOL)locationManagerShouldDisplayHeadingCalibration:(CLLocationManager *)manager {
@@ -407,6 +387,7 @@
 - (void)locationManager:(CLLocationManager *)manager didUpdateHeading:(CLHeading *)newHeading {
 	CGAffineTransform transform = CGAffineTransformMakeRotation(newHeading.trueHeading*(M_PI/180));
 	playerArrowImage.transform = transform;
+	playerArrowImage.center = _mapView.center;
 }
 
 #pragma mark - MKMapViewDelegate
@@ -418,6 +399,22 @@
 		return;
     }
 
+	NSDictionary *playerInfo = [[API sharedInstance] playerInfo];
+	int ap = [playerInfo[@"ap"] intValue];
+	int level = [API levelForAp:ap];
+	float energy = [playerInfo[@"energy"] floatValue];
+	float maxEnergy = [API maxXmForLevel:level];
+
+	if (energy < maxEnergy) {
+		[[[API sharedInstance] energyToCollect] removeAllObjects];
+		for (EnergyGlob *xm in [EnergyGlob MR_findAll]) {
+			if ([xm distanceFromCoordinate:_mapView.centerCoordinate] <= 30) {
+				[[[API sharedInstance] energyToCollect] addObject:xm];
+			}
+		}
+		//NSLog(@"Collecting %d XM", [[[API sharedInstance] energyToCollect] count]);
+	}
+
 	CLLocation *mapLocation = [[CLLocation alloc] initWithLatitude:_mapView.centerCoordinate.latitude longitude:_mapView.centerCoordinate.longitude];
 	CLLocationDistance meters = [mapLocation distanceFromLocation:lastLocation];
 	if (meters == -1 || meters >= 10) {
@@ -427,8 +424,12 @@
 
 }
 
+- (void)mapViewDidFinishLoadingMap:(MKMapView *)mapView {
+    [EAGLContext setCurrentContext:nil];
+}
+
 - (void)mapView:(MKMapView *)mapView didSelectAnnotationView:(MKAnnotationView *)view {
-	[view setSelected:NO animated:YES];
+	[_mapView deselectAnnotation:view.annotation animated:NO];
 	if ([view.annotation isKindOfClass:[Portal class]]) {
 		currentPortal = (Portal *)view.annotation;
 		[self performSegueWithIdentifier:@"PortalDetailSegue" sender:self];
@@ -489,26 +490,7 @@
 
 - (MKAnnotationView *)mapView:(MKMapView *)mapView viewForAnnotation:(id <MKAnnotation>)annotation {
 	
-	if ([annotation isKindOfClass:[MKUserLocation class]]) {
-
-		return nil;
-		
-		return [[MKAnnotationView alloc] initWithAnnotation:annotation reuseIdentifier:nil];
-		
-		static NSString *AnnotationViewID = @"userLocationAnnotationView";
-		
-		MKPinAnnotationView *annotationView = (MKPinAnnotationView *)[_mapView dequeueReusableAnnotationViewWithIdentifier:AnnotationViewID];
-		if (annotationView == nil) {
-			annotationView = [[MKPinAnnotationView alloc] initWithAnnotation:annotation reuseIdentifier:AnnotationViewID];
-			annotationView.canShowCallout = NO;
-			annotationView.pinColor = MKPinAnnotationColorGreen;
-		} else {
-			annotationView.annotation = annotation;
-		}
-		
-		return annotationView;
-		
-	} else if ([annotation isKindOfClass:[Portal class]]) {
+	if ([annotation isKindOfClass:[Portal class]]) {
 		
 		static NSString *AnnotationViewID = @"portalAnnotationView";
 		
@@ -519,13 +501,11 @@
 		} else {
 			annotationView.annotation = annotation;
 		}
-
-//		annotationView.image = nil;
 		
 		Portal *portal = (Portal *)annotation;
 		annotationView.image = [[API sharedInstance] iconForPortal:portal];
-		annotationView.alpha = .5;
-		
+		annotationView.alpha = 0;
+
 		return annotationView;
 	
 	} else if ([annotation isKindOfClass:[Item class]]) {
@@ -588,12 +568,52 @@
 	return nil;
 }
 
+#pragma mark - Zoom Level
+
+- (NSUInteger)zoomLevelForRegion:(MKCoordinateRegion)region {
+    double centerPixelX = [MKMapView longitudeToPixelSpaceX: region.center.longitude];
+    double topLeftPixelX = [MKMapView longitudeToPixelSpaceX: region.center.longitude - region.span.longitudeDelta / 2];
+    double scaledMapWidth = (centerPixelX - topLeftPixelX) * 2;
+    CGSize mapSizeInPixels = _mapView.bounds.size;
+    double zoomScale = scaledMapWidth / mapSizeInPixels.width;
+    double zoomExponent = log(zoomScale) / log(2);
+    double zoomLevel = 20 - zoomExponent;
+    return zoomLevel;
+}
+
 #pragma mark - Gestures
 
-//- (void)mapTapped:(UITapGestureRecognizer *)recognizer {
+- (void)handlePinch:(UIPinchGestureRecognizer*)recognizer {
+    static MKCoordinateRegion originalRegion;
+    if (recognizer.state == UIGestureRecognizerStateBegan) {
+        originalRegion = _mapView.region;
+    }
+
+    double latdelta = originalRegion.span.latitudeDelta / recognizer.scale;
+    double londelta = originalRegion.span.longitudeDelta / recognizer.scale;
+    MKCoordinateSpan span = MKCoordinateSpanMake(latdelta, londelta);
+	MKCoordinateRegion region = MKCoordinateRegionMake(originalRegion.center, span);
+
+	if ([self zoomLevelForRegion:region] >= 16) {
+		[_mapView setRegion:region animated:NO];
+	}
+    
+}
+
+- (void)mapTapped:(UITapGestureRecognizer *)recognizer {
+
+	if (_mapView.scrollEnabled) {
+		[locationManager startUpdatingLocation];
+		[_mapView setScrollEnabled:NO];
+	} else {
+		[locationManager stopUpdatingLocation];
+		[_mapView setScrollEnabled:YES];
+	}
+
 //	MKMapView *mapView = (MKMapView *)recognizer.view;
 //	id<MKOverlay> tappedOverlay = nil;
 //	for (id<MKOverlay> overlay in mapView.overlays) {
+//		if (![overlay isKindOfClass:[Portal class]]) { continue; }
 //		MKOverlayView *view = [mapView viewForOverlay:overlay];
 //		if (view) {
 //			// Get view frame rect in the mapView's coordinate system
@@ -607,15 +627,29 @@
 //			}
 //		}
 //	}
-//	
-//	//NSLog(@"Tapped overlay: %@", tappedOverlay);
-//	//NSLog(@"Tapped view: %@", [mapView viewForOverlay:tappedOverlay]);
-//	
+//
+////	NSLog(@"Tapped overlay: %@", tappedOverlay);
+////	NSLog(@"Tapped view: %@", [mapView viewForOverlay:tappedOverlay]);
+//
 //	if ([tappedOverlay isKindOfClass:[Portal class]]) {
 //		currentPortal = (Portal *)tappedOverlay;
 //		[self performSegueWithIdentifier:@"PortalDetailSegue" sender:self];
 //	}
-//}
+	
+}
+
+- (void)mapLongPress:(UILongPressGestureRecognizer *)recognizer {
+	if (recognizer.state == UIGestureRecognizerStateBegan) {
+
+        CGPoint location = [recognizer locationInView:recognizer.view];
+        UIMenuController *menuController = [UIMenuController sharedMenuController];
+        UIMenuItem *resetMenuItem = [[UIMenuItem alloc] initWithTitle:@"Fire XMP" action:@selector(fireXMP)];
+        [menuController setMenuItems:[NSArray arrayWithObject:resetMenuItem]];
+        [menuController setTargetRect:CGRectMake(location.x, location.y, 0.0f, 0.0f) inView:recognizer.view];
+        [menuController setMenuVisible:YES animated:YES];
+
+	}
+}
 
 - (void)xmpLongPressGestureHandler:(UILongPressGestureRecognizer *)gesture {
 	if (gesture.state == UIGestureRecognizerStateEnded) {
@@ -639,27 +673,22 @@
 	}
 }
 
-#pragma mark - Collecting XM
+#pragma mark - Actions
 
-- (IBAction)collectXM {
+- (BOOL)canBecomeFirstResponder {
+    return YES;
+}
 
-	[[SoundManager sharedManager] playSound:@"Sound/sfx_ui_success.aif"];
-	
-	MBProgressHUD *HUD = [[MBProgressHUD alloc] initWithView:[AppDelegate instance].window];
-	HUD.userInteractionEnabled = YES;
-	HUD.mode = MBProgressHUDModeCustomView;
-	HUD.dimBackground = YES;
-	HUD.showCloseButton = YES;
-	_xmCollectView = [XMCollectViewController xmCollectView];
-	HUD.customView = _xmCollectView.view;
-	[[AppDelegate instance].window addSubview:HUD];
-	[HUD show:YES];
-
+- (BOOL)canPerformAction:(SEL)selector withSender:(id) sender {
+    if (selector == @selector(fireXMP)) {
+        return YES;
+    }
+    return NO;
 }
 
 #pragma mark - Firing XMP
 
-- (IBAction)fireXMP {
+- (void)fireXMP {
 
 //	int ap = [[API sharedInstance].playerInfo[@"ap"] intValue];
 //	int level = [API levelForAp:ap];
@@ -809,11 +838,18 @@
 - (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
 	if ([segue.identifier isEqualToString:@"PortalDetailSegue"]) {
 		[[SoundManager sharedManager] playSound:@"Sound/sfx_ui_success.aif"];
+
+		portalDetailSegue = YES;
 		
 		PortalDetailViewController *vc = segue.destinationViewController;
 		vc.portal = currentPortal;
 		vc.mapCenterCoordinate = _mapView.centerCoordinate;
 		currentPortal = nil;
+	} else if ([segue.identifier isEqualToString:@"FactionChooseSegue"]) {
+		portalDetailSegue = NO;
+
+		MissionViewController *vc = segue.destinationViewController;
+		vc.factionChoose = YES;
 	}
 }
 
