@@ -24,6 +24,7 @@
 #import "PortalLink.h"
 #import "ControlField.h"
 #import "PowerCube.h"
+#import "Plext.h"
 
 typedef enum {
 	PortalShieldRarityCommon,
