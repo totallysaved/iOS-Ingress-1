@@ -14,6 +14,8 @@
 #import <GLKit/GLKit.h>
 #import "DB.h"
 
+#define kDeviceSoundLevel @"kDeviceSoundLevel"
+
 typedef void (^SoundCompletionBlock)(void);
 
 @interface API : NSObject <AVAudioPlayerDelegate, MTStatusBarOverlayDelegate> {
@@ -30,7 +32,7 @@ typedef void (^SoundCompletionBlock)(void);
 @property (nonatomic, strong) NSString *SACSID;
 @property (nonatomic, strong) NSMutableDictionary *playerInfo;
 @property (nonatomic, strong) NSMutableArray *energyToCollect;
-@property (nonatomic, readonly) long long knobSyncTimestamp;
+@property (nonatomic, readonly) long long currentTimestamp;
 
 @property (nonatomic) SystemSoundID ui_success_sound;
 @property (nonatomic) SystemSoundID ui_fail_sound;
@@ -66,7 +68,7 @@ typedef void (^SoundCompletionBlock)(void);
 
 - (void)getInventoryWithCompletionHandler:(void (^)(void))handler;
 - (void)getObjectsWithCompletionHandler:(void (^)(void))handler;
-- (void)loadCommunicationForFactionOnly:(BOOL)factionOnly completionHandler:(void (^)(NSArray *messages))handler;
+- (void)loadCommunicationForFactionOnly:(BOOL)factionOnly completionHandler:(void (^)(void))handler;
 - (void)sendMessage:(NSString *)message factionOnly:(BOOL)factionOnly completionHandler:(void (^)(void))handler;
 - (void)loadScoreWithCompletionHandler:(void (^)(int alienScore, int resistanceScore))handler;
 - (void)redeemReward:(NSString *)passcode completionHandler:(void (^)(BOOL accepted, NSString *response))handler;
@@ -84,7 +86,8 @@ typedef void (^SoundCompletionBlock)(void);
 - (void)pickUpItemWithGuid:(NSString *)guid completionHandler:(void (^)(NSString *errorStr))handler;
 - (void)recycleItem:(Item *)item completionHandler:(void (^)(void))handler;
 - (void)usePowerCube:(PowerCube *)powerCube completionHandler:(void (^)(void))handler;
-- (void)rechargePortal:(Portal *)portal completionHandler:(void (^)(void))handler;
+- (void)rechargePortal:(Portal *)portal completionHandler:(void (^)(NSString *errorStr))handler;
+- (void)remoteRechargePortal:(Portal *)portal portalKey:(PortalKey *)portalKey completionHandler:(void (^)(NSString *errorStr))handler;
 - (void)queryLinkabilityForPortal:(Portal *)portal portalKey:(PortalKey *)portalKey completionHandler:(void (^)(NSString *errorStr))handler;
 - (void)linkPortal:(Portal *)portal withPortalKey:(PortalKey *)portalKey completionHandler:(void (^)(NSString *errorStr))handler;
 

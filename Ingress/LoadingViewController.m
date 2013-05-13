@@ -53,7 +53,7 @@
 	jsonDict = [@{
 				@"nemesisSoftwareVersion": @"2013-05-03T19:32:11Z 929c2cce62eb opt",	// 1.25.2
 				@"deviceSoftwareVersion": @"4.1.1",
-				} mutableCopy];
+	} mutableCopy];
 
 	versionString = @"v1.25.2";
 	
@@ -64,8 +64,17 @@
 
 	[wheelActivityIndicatorView startAnimating];
 	
-	[SoundManager sharedManager].allowsBackgroundMusic = NO;
+	[SoundManager sharedManager].allowsBackgroundMusic = YES;
     [[SoundManager sharedManager] prepareToPlay];
+
+	if (![[NSUserDefaults standardUserDefaults] objectForKey:kDeviceSoundLevel]) {
+		[[NSUserDefaults standardUserDefaults] setFloat:1.0 forKey:kDeviceSoundLevel];
+		[[NSUserDefaults standardUserDefaults] synchronize];
+	}
+
+	float soundVolumeValue = [[NSUserDefaults standardUserDefaults] floatForKey:kDeviceSoundLevel];
+	[SoundManager sharedManager].soundVolume = soundVolumeValue;
+	[SoundManager sharedManager].musicVolume = soundVolumeValue;
 
 	[self performHandshake];
 
@@ -206,7 +215,7 @@
 
 						createCodenameScrollview.hidden = NO;
 
-						NSMutableAttributedString *attrStr = [[NSMutableAttributedString alloc] initWithString:@"Niantic software online.\nIncoming text transmission detected.\nOpening channel...\n\n> I need you help. The world needs your help. This chat is not secure.\n\nI need you to create a unique codename so that I can call you on a secure line.\n\nThis is the name other agents will know you by."];
+						NSMutableAttributedString *attrStr = [[NSMutableAttributedString alloc] initWithString:@"Niantic software online.\nIncoming text transmission detected.\nOpening channel...\n\n> I need your help. The world needs your help. This chat is not secure.\n\nI need you to create a unique codename so that I can call you on a secure line.\n\nThis is the name other agents will know you by."];
 						[attrStr setAttributes:@{NSFontAttributeName: [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:16], NSForegroundColorAttributeName : [UIColor colorWithRed:45.0/255.0 green:239.0/255.0 blue:249.0/255.0 alpha:1.0]} range:NSMakeRange(0, 80)];
 						[attrStr setAttributes:@{NSFontAttributeName: [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:16], NSForegroundColorAttributeName : [UIColor whiteColor]} range:NSMakeRange(80, 202)];
 
@@ -244,11 +253,13 @@
 
 	//Error getting SACSID
 	[label setText:@"Login Error"];
+	retryHandshakeButton.hidden = NO;
 
 }
 
 - (void)webView:(UIWebView *)webView didFailLoadWithError:(NSError *)error { 
 	[label setText:@"Connection Error"]; //[error localizedDescription]
+	retryHandshakeButton.hidden = NO;
 }
 
 #pragma mark - UITextFieldDelegate
@@ -282,6 +293,14 @@
 }
 
 #pragma mark - IBActions
+
+- (IBAction)retryHandshake {
+	[[SoundManager sharedManager] playSound:@"Sound/sfx_ui_success.aif"];
+
+	[self performHandshake];
+
+	retryHandshakeButton.hidden = YES;
+}
 
 - (IBAction)activate {
 	

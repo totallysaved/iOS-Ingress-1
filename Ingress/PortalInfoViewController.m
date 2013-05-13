@@ -234,18 +234,29 @@
 	[[AppDelegate instance].window addSubview:HUD];
 	[HUD show:YES];
 	
-	[[SoundManager sharedManager] playSound:@"Sound/sfx_resonator_recharge.aif"];
+	[[API sharedInstance] playSound:@"SFX_RESONATOR_RECHARGE"];
 	
-	[[API sharedInstance] rechargePortal:self.portal completionHandler:^() {
+	[[API sharedInstance] rechargePortal:self.portal completionHandler:^(NSString *errorStr) {
 		
 		[HUD hide:YES];
-		
-		[[SoundManager sharedManager] playSound:@"Sound/speech_resonator.aif"];
-		
-		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, .75 * NSEC_PER_SEC), dispatch_get_main_queue(), ^(void){
-			[[SoundManager sharedManager] playSound:@"Sound/speech_recharged.aif"];
-		});
-		
+
+		if (errorStr) {
+
+			MBProgressHUD *HUD = [[MBProgressHUD alloc] initWithView:[AppDelegate instance].window];
+			HUD.userInteractionEnabled = YES;
+			HUD.dimBackground = YES;
+			HUD.mode = MBProgressHUDModeCustomView;
+			HUD.customView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"warning.png"]];
+			HUD.detailsLabelFont = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:16];
+			HUD.detailsLabelText = errorStr;
+			[[AppDelegate instance].window addSubview:HUD];
+			[HUD show:YES];
+			[HUD hide:YES afterDelay:3];
+
+		} else {
+			[[API sharedInstance] playSounds:@[@"SPEECH_RESONATOR", @"SPEECH_RECHARGED"]];
+		}
+
 	}];
 	
 }
