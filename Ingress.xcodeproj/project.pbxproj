@@ -23,6 +23,7 @@
 		FA32E888169F657400D30E90 /* CommViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = FA32E887169F657400D30E90 /* CommViewController.m */; };
 		FA32E88B169F661500D30E90 /* CommTableViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = FA32E88A169F661500D30E90 /* CommTableViewController.m */; };
 		FA39E146174166C200202259 /* Plext.m in Sources */ = {isa = PBXBuildFile; fileRef = FA39E145174166C200202259 /* Plext.m */; };
+		FA39E1501742CA2D00202259 /* PortalUpgradeViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = FA39E14F1742CA2D00202259 /* PortalUpgradeViewController.m */; };
 		FA3BD746173514D5004F5ED5 /* nudge_callout@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FA3BD745173514D5004F5ED5 /* nudge_callout@2x.png */; };
 		FA3BD78117352C5B004F5ED5 /* APView.m in Sources */ = {isa = PBXBuildFile; fileRef = FA3BD78017352C5B004F5ED5 /* APView.m */; };
 		FA3BD78417352DCE004F5ED5 /* ap_fill_aliens@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FA3BD78217352DCE004F5ED5 /* ap_fill_aliens@2x.png */; };
@@ -105,7 +106,7 @@
 		FA6EF957172D1C490004905F /* trackImage@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FA6EF956172D1C490004905F /* trackImage@2x.png */; };
 		FA6EF960172D2D360004905F /* progressImage-aliens@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FA6EF95E172D2D350004905F /* progressImage-aliens@2x.png */; };
 		FA6EF961172D2D360004905F /* progressImage-resistance@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FA6EF95F172D2D360004905F /* progressImage-resistance@2x.png */; };
-		FA7792591738F6040019462E /* Default-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FA7792581738F6040019462E /* Default-568h@2x.png */; };
+		FA7792591738F6040019462E /* Defaulta-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FA7792581738F6040019462E /* Defaulta-568h@2x.png */; };
 		FA779AAB16A55FC40080B62A /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FA779AAA16A55FC40080B62A /* AVFoundation.framework */; };
 		FA7AC9D816D14C5400505404 /* SoundManager.m in Sources */ = {isa = PBXBuildFile; fileRef = FA7AC9D716D14C5400505404 /* SoundManager.m */; };
 		FA7BCEDE16B535B0007636C8 /* MKCircle+Ingress.m in Sources */ = {isa = PBXBuildFile; fileRef = FA7BCEDD16B535B0007636C8 /* MKCircle+Ingress.m */; };
@@ -132,9 +133,6 @@
 		FAA0C30516B993B800DB57E8 /* default_btn_disabled@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FAA0C30216B993B800DB57E8 /* default_btn_disabled@2x.png */; };
 		FAA0C30616B993B800DB57E8 /* default_btn_down@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FAA0C30316B993B800DB57E8 /* default_btn_down@2x.png */; };
 		FAA0C30716B993B800DB57E8 /* default_btn@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FAA0C30416B993B800DB57E8 /* default_btn@2x.png */; };
-		FAA4985D173EFEEE00801651 /* NSAttributedStringValueTransformer.m in Sources */ = {isa = PBXBuildFile; fileRef = FAA4985C173EFEEE00801651 /* NSAttributedStringValueTransformer.m */; };
-		FAA4986A173EFFFA00801651 /* AttributedStringCoderHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = FAA49867173EFFFA00801651 /* AttributedStringCoderHelper.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
-		FAA4986B173EFFFA00801651 /* FontUtility.c in Sources */ = {isa = PBXBuildFile; fileRef = FAA49868173EFFFA00801651 /* FontUtility.c */; };
 		FAA4986D173F002700801651 /* CoreText.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FAA4986C173F002700801651 /* CoreText.framework */; };
 		FAA7E4F616D7E429007EAE9A /* MediaItemsViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = FAA7E4F316D7E3B9007EAE9A /* MediaItemsViewController.m */; };
 		FAA7E4F716D7E42B007EAE9A /* PortalKeyCell.m in Sources */ = {isa = PBXBuildFile; fileRef = FAA7E4F516D7E3C5007EAE9A /* PortalKeyCell.m */; };
@@ -226,8 +224,8 @@
 		FAD5EF1816A2081B00182F6B /* PCPieChart.m in Sources */ = {isa = PBXBuildFile; fileRef = FAD5EF1716A2081B00182F6B /* PCPieChart.m */; };
 		FAD5EF1B16A21B3900182F6B /* check.png in Resources */ = {isa = PBXBuildFile; fileRef = FAD5EF1916A21B3900182F6B /* check.png */; };
 		FAD5EF1C16A21B3900182F6B /* check@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FAD5EF1A16A21B3900182F6B /* check@2x.png */; };
-		FAD9D7C616AC640A006553E0 /* PortalInfoViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = FAD9D7C516AC640A006553E0 /* PortalInfoViewController.m */; };
-		FAD9D7C916AC6414006553E0 /* PortalUpgradeViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = FAD9D7C816AC6414006553E0 /* PortalUpgradeViewController.m */; };
+		FAD9D7C616AC640A006553E0 /* PortalActionsViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = FAD9D7C516AC640A006553E0 /* PortalActionsViewController.m */; };
+		FAD9D7C916AC6414006553E0 /* PortalInfoViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = FAD9D7C816AC6414006553E0 /* PortalInfoViewController.m */; };
 		FAE6AC7416A0E2700082BBB5 /* DAKeyboardControl.m in Sources */ = {isa = PBXBuildFile; fileRef = FAE6AC7316A0E2700082BBB5 /* DAKeyboardControl.m */; };
 		FAE6FB6316AD391800FE188C /* UIBlackCloseButton.png in Resources */ = {isa = PBXBuildFile; fileRef = FAE6FB5F16AD391800FE188C /* UIBlackCloseButton.png */; };
 		FAE6FB6416AD391800FE188C /* UIBlackCloseButton@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FAE6FB6016AD391800FE188C /* UIBlackCloseButton@2x.png */; };
@@ -307,6 +305,8 @@
 		FA32E88A169F661500D30E90 /* CommTableViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CommTableViewController.m; sourceTree = "<group>"; };
 		FA39E144174166C100202259 /* Plext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Plext.h; path = CoreData/Plext.h; sourceTree = "<group>"; };
 		FA39E145174166C200202259 /* Plext.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = Plext.m; path = CoreData/Plext.m; sourceTree = "<group>"; };
+		FA39E14E1742CA2D00202259 /* PortalUpgradeViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PortalUpgradeViewController.h; sourceTree = "<group>"; };
+		FA39E14F1742CA2D00202259 /* PortalUpgradeViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PortalUpgradeViewController.m; sourceTree = "<group>"; };
 		FA3BD745173514D5004F5ED5 /* nudge_callout@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "nudge_callout@2x.png"; sourceTree = "<group>"; };
 		FA3BD77F17352C5B004F5ED5 /* APView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = APView.h; sourceTree = "<group>"; };
 		FA3BD78017352C5B004F5ED5 /* APView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = APView.m; sourceTree = "<group>"; };
@@ -411,7 +411,7 @@
 		FA6EF956172D1C490004905F /* trackImage@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "trackImage@2x.png"; sourceTree = "<group>"; };
 		FA6EF95E172D2D350004905F /* progressImage-aliens@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "progressImage-aliens@2x.png"; sourceTree = "<group>"; };
 		FA6EF95F172D2D360004905F /* progressImage-resistance@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "progressImage-resistance@2x.png"; sourceTree = "<group>"; };
-		FA7792581738F6040019462E /* Default-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "Default-568h@2x.png"; path = "../Default-568h@2x.png"; sourceTree = "<group>"; };
+		FA7792581738F6040019462E /* Defaulta-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "Defaulta-568h@2x.png"; path = "../Defaulta-568h@2x.png"; sourceTree = "<group>"; };
 		FA779AAA16A55FC40080B62A /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		FA7AC9D116D0116800505404 /* Sound */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Sound; path = Ingress/Sound; sourceTree = "<group>"; };
 		FA7AC9D616D14C5400505404 /* SoundManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SoundManager.h; sourceTree = "<group>"; };
@@ -450,12 +450,6 @@
 		FAA0C30216B993B800DB57E8 /* default_btn_disabled@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "default_btn_disabled@2x.png"; sourceTree = "<group>"; };
 		FAA0C30316B993B800DB57E8 /* default_btn_down@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "default_btn_down@2x.png"; sourceTree = "<group>"; };
 		FAA0C30416B993B800DB57E8 /* default_btn@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "default_btn@2x.png"; sourceTree = "<group>"; };
-		FAA4985B173EFEEE00801651 /* NSAttributedStringValueTransformer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSAttributedStringValueTransformer.h; sourceTree = "<group>"; };
-		FAA4985C173EFEEE00801651 /* NSAttributedStringValueTransformer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NSAttributedStringValueTransformer.m; sourceTree = "<group>"; };
-		FAA49866173EFFFA00801651 /* AttributedStringCoderHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AttributedStringCoderHelper.h; sourceTree = "<group>"; };
-		FAA49867173EFFFA00801651 /* AttributedStringCoderHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AttributedStringCoderHelper.m; sourceTree = "<group>"; };
-		FAA49868173EFFFA00801651 /* FontUtility.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = FontUtility.c; sourceTree = "<group>"; };
-		FAA49869173EFFFA00801651 /* FontUtility.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FontUtility.h; sourceTree = "<group>"; };
 		FAA4986C173F002700801651 /* CoreText.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreText.framework; path = System/Library/Frameworks/CoreText.framework; sourceTree = SDKROOT; };
 		FAA7E4F216D7E3B9007EAE9A /* MediaItemsViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MediaItemsViewController.h; sourceTree = "<group>"; };
 		FAA7E4F316D7E3B9007EAE9A /* MediaItemsViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MediaItemsViewController.m; sourceTree = "<group>"; };
@@ -748,10 +742,10 @@
 		FAD5EF1716A2081B00182F6B /* PCPieChart.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PCPieChart.m; sourceTree = "<group>"; };
 		FAD5EF1916A21B3900182F6B /* check.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = check.png; sourceTree = "<group>"; };
 		FAD5EF1A16A21B3900182F6B /* check@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "check@2x.png"; sourceTree = "<group>"; };
-		FAD9D7C416AC640A006553E0 /* PortalInfoViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PortalInfoViewController.h; sourceTree = "<group>"; };
-		FAD9D7C516AC640A006553E0 /* PortalInfoViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PortalInfoViewController.m; sourceTree = "<group>"; };
-		FAD9D7C716AC6414006553E0 /* PortalUpgradeViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PortalUpgradeViewController.h; sourceTree = "<group>"; };
-		FAD9D7C816AC6414006553E0 /* PortalUpgradeViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PortalUpgradeViewController.m; sourceTree = "<group>"; };
+		FAD9D7C416AC640A006553E0 /* PortalActionsViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PortalActionsViewController.h; sourceTree = "<group>"; };
+		FAD9D7C516AC640A006553E0 /* PortalActionsViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PortalActionsViewController.m; sourceTree = "<group>"; };
+		FAD9D7C716AC6414006553E0 /* PortalInfoViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PortalInfoViewController.h; sourceTree = "<group>"; };
+		FAD9D7C816AC6414006553E0 /* PortalInfoViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PortalInfoViewController.m; sourceTree = "<group>"; };
 		FAE6AC7216A0E2700082BBB5 /* DAKeyboardControl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DAKeyboardControl.h; sourceTree = "<group>"; };
 		FAE6AC7316A0E2700082BBB5 /* DAKeyboardControl.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DAKeyboardControl.m; sourceTree = "<group>"; };
 		FAE6FB5F16AD391800FE188C /* UIBlackCloseButton.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = UIBlackCloseButton.png; sourceTree = "<group>"; };
@@ -938,6 +932,15 @@
 			);
 			name = Comm;
 			path = Ingress;
+			sourceTree = "<group>";
+		};
+		FA39E14D1742C96800202259 /* Upgrade */ = {
+			isa = PBXGroup;
+			children = (
+				FA39E14E1742CA2D00202259 /* PortalUpgradeViewController.h */,
+				FA39E14F1742CA2D00202259 /* PortalUpgradeViewController.m */,
+			);
+			name = Upgrade;
 			sourceTree = "<group>";
 		};
 		FA3BD77E17352C5B004F5ED5 /* APView */ = {
@@ -1259,17 +1262,6 @@
 			name = "MKMapView+ZoomLevel";
 			sourceTree = "<group>";
 		};
-		FAA49865173EFFFA00801651 /* AttributedStringCoderHelper */ = {
-			isa = PBXGroup;
-			children = (
-				FAA49866173EFFFA00801651 /* AttributedStringCoderHelper.h */,
-				FAA49867173EFFFA00801651 /* AttributedStringCoderHelper.m */,
-				FAA49868173EFFFA00801651 /* FontUtility.c */,
-				FAA49869173EFFFA00801651 /* FontUtility.h */,
-			);
-			path = AttributedStringCoderHelper;
-			sourceTree = "<group>";
-		};
 		FAA9C41517304B6A000C2638 /* MagicalRecord */ = {
 			isa = PBXGroup;
 			children = (
@@ -1395,8 +1387,6 @@
 			children = (
 				FAC23D7816B16F44000C17DD /* Ingress.xcdatamodeld */,
 				FAC23D6F16B16EB6000C17DD /* DB.h */,
-				FAA4985B173EFEEE00801651 /* NSAttributedStringValueTransformer.h */,
-				FAA4985C173EFEEE00801651 /* NSAttributedStringValueTransformer.m */,
 			);
 			name = DB;
 			sourceTree = "<group>";
@@ -1746,8 +1736,9 @@
 			children = (
 				FACD502116A441400077837F /* PortalDetailViewController.h */,
 				FACD502216A441400077837F /* PortalDetailViewController.m */,
-				FAD9D7C116AC63ED006553E0 /* Info */,
-				FAD9D7C316AC63F2006553E0 /* Upgrade */,
+				FAD9D7C116AC63ED006553E0 /* Actions */,
+				FAD9D7C316AC63F2006553E0 /* Info */,
+				FA39E14D1742C96800202259 /* Upgrade */,
 			);
 			name = "Portal Detail";
 			sourceTree = "<group>";
@@ -1770,22 +1761,22 @@
 			path = iOSPlot;
 			sourceTree = "<group>";
 		};
-		FAD9D7C116AC63ED006553E0 /* Info */ = {
+		FAD9D7C116AC63ED006553E0 /* Actions */ = {
 			isa = PBXGroup;
 			children = (
-				FAD9D7C416AC640A006553E0 /* PortalInfoViewController.h */,
-				FAD9D7C516AC640A006553E0 /* PortalInfoViewController.m */,
+				FAD9D7C416AC640A006553E0 /* PortalActionsViewController.h */,
+				FAD9D7C516AC640A006553E0 /* PortalActionsViewController.m */,
 			);
-			name = Info;
+			name = Actions;
 			sourceTree = "<group>";
 		};
-		FAD9D7C316AC63F2006553E0 /* Upgrade */ = {
+		FAD9D7C316AC63F2006553E0 /* Info */ = {
 			isa = PBXGroup;
 			children = (
-				FAD9D7C716AC6414006553E0 /* PortalUpgradeViewController.h */,
-				FAD9D7C816AC6414006553E0 /* PortalUpgradeViewController.m */,
+				FAD9D7C716AC6414006553E0 /* PortalInfoViewController.h */,
+				FAD9D7C816AC6414006553E0 /* PortalInfoViewController.m */,
 			);
-			name = Upgrade;
+			name = Info;
 			sourceTree = "<group>";
 		};
 		FAE6AC7116A0E2700082BBB5 /* DAKeyboardControl */ = {
@@ -1821,7 +1812,6 @@
 				FA54DEF616A19B47006A92E0 /* MBProgressHUD */,
 				FAE6AC7116A0E2700082BBB5 /* DAKeyboardControl */,
 				FAE797CD16B4874100A57316 /* UIImage+ColorReplace */,
-				FAA49865173EFFFA00801651 /* AttributedStringCoderHelper */,
 			);
 			name = Extensions;
 			sourceTree = "<group>";
@@ -1930,7 +1920,7 @@
 				FAEA5849169C7E7500E2F502 /* Ingress-Prefix.pch */,
 				FAEA584D169C7E7500E2F502 /* Default.png */,
 				FAEA584F169C7E7500E2F502 /* Default@2x.png */,
-				FA7792581738F6040019462E /* Default-568h@2x.png */,
+				FA7792581738F6040019462E /* Defaulta-568h@2x.png */,
 				FAEA586A169C844400E2F502 /* Icon-72.png */,
 				FAEA5868169C842D00E2F502 /* Icon-57.png */,
 				FAEA586C169C858400E2F502 /* Icon-114.png */,
@@ -2144,7 +2134,7 @@
 				FA3BD78D17356424004F5ED5 /* device@2x.png in Resources */,
 				FA3BD78F1735B704004F5ED5 /* blue_bg@2x.png in Resources */,
 				FA3FC31317369E4D009CD94A /* green_bg@2x.png in Resources */,
-				FA7792591738F6040019462E /* Default-568h@2x.png in Resources */,
+				FA7792591738F6040019462E /* Defaulta-568h@2x.png in Resources */,
 				FA859F19173C3537002A2117 /* ada_refactor@2x.png in Resources */,
 				FA859F1A173C3537002A2117 /* jarvis_virus@2x.png in Resources */,
 			);
@@ -2185,8 +2175,8 @@
 				FA52009C16A9AB24004AFE4D /* EXFTagDefinitionHolder.m in Sources */,
 				FA52009D16A9AB24004AFE4D /* EXFUtils.m in Sources */,
 				FAB5A2CD16AA165D00176C34 /* LevelChooserViewController.m in Sources */,
-				FAD9D7C616AC640A006553E0 /* PortalInfoViewController.m in Sources */,
-				FAD9D7C916AC6414006553E0 /* PortalUpgradeViewController.m in Sources */,
+				FAD9D7C616AC640A006553E0 /* PortalActionsViewController.m in Sources */,
+				FAD9D7C916AC6414006553E0 /* PortalInfoViewController.m in Sources */,
 				FA7E1AB016AC6D3900C8F949 /* PortalOverlayView.m in Sources */,
 				FAC23D7A16B16F44000C17DD /* Ingress.xcdatamodeld in Sources */,
 				FAC23E0B16B18755000C17DD /* Shield.m in Sources */,
@@ -2285,10 +2275,8 @@
 				FA859F16173BD800002A2117 /* EnergyGlob.m in Sources */,
 				FA02F9D8173D54540016EE7F /* MediaWebViewViewController.m in Sources */,
 				FA9153F1173E547B008E239C /* XMOverlay.m in Sources */,
-				FAA4985D173EFEEE00801651 /* NSAttributedStringValueTransformer.m in Sources */,
-				FAA4986A173EFFFA00801651 /* AttributedStringCoderHelper.m in Sources */,
-				FAA4986B173EFFFA00801651 /* FontUtility.c in Sources */,
 				FA39E146174166C200202259 /* Plext.m in Sources */,
+				FA39E1501742CA2D00202259 /* PortalUpgradeViewController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
