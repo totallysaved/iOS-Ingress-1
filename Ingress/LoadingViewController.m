@@ -51,11 +51,11 @@
 	////////
 
 	jsonDict = [@{
-				@"nemesisSoftwareVersion": @"2013-05-03T19:32:11Z 929c2cce62eb opt",	// 1.25.2
+				@"nemesisSoftwareVersion": @"2013-05-22T19:12:58Z 7a2d8c1d88b1 opt",
 				@"deviceSoftwareVersion": @"4.1.1",
 	} mutableCopy];
 
-	versionString = @"v1.25.2";
+	versionString = @"v1.26.1";
 	
 }
 
@@ -121,6 +121,7 @@
 	[_webView setAlpha:0];
 	[self.view addSubview:_webView];
 	NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:handshakeURL];
+	[request setValue:@"Nemesis (gzip)" forHTTPHeaderField:@"User-Agent"];
 	[_webView loadRequest:request];
 	
 }
@@ -412,8 +413,8 @@
 
 		} else {
 
-			[API sharedInstance].playerInfo = [@{@"nickname": codenameToConfirm} mutableCopy];
-			
+//			[API sharedInstance].playerInfo = [@{@"nickname": codenameToConfirm} mutableCopy];
+
 			typewriterLabel.text = @"";
 
 			typewriterView.hidden = NO;

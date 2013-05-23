@@ -30,7 +30,7 @@ typedef void (^SoundCompletionBlock)(void);
 @property (nonatomic, strong) NSOperationQueue *notificationQueue;
 @property (nonatomic, strong) NSString *xsrfToken;
 @property (nonatomic, strong) NSString *SACSID;
-@property (nonatomic, strong) NSMutableDictionary *playerInfo;
+@property (nonatomic, readonly) Player *player;
 @property (nonatomic, strong) NSMutableArray *energyToCollect;
 @property (nonatomic, readonly) long long currentTimestamp;
 
@@ -86,11 +86,12 @@ typedef void (^SoundCompletionBlock)(void);
 - (void)pickUpItemWithGuid:(NSString *)guid completionHandler:(void (^)(NSString *errorStr))handler;
 - (void)recycleItem:(Item *)item completionHandler:(void (^)(void))handler;
 - (void)usePowerCube:(PowerCube *)powerCube completionHandler:(void (^)(void))handler;
-- (void)rechargePortal:(Portal *)portal completionHandler:(void (^)(NSString *errorStr))handler;
+- (void)rechargePortal:(Portal *)portal slots:(NSArray *)slots completionHandler:(void (^)(NSString *errorStr))handler;
 - (void)remoteRechargePortal:(Portal *)portal portalKey:(PortalKey *)portalKey completionHandler:(void (^)(NSString *errorStr))handler;
 - (void)queryLinkabilityForPortal:(Portal *)portal portalKey:(PortalKey *)portalKey completionHandler:(void (^)(NSString *errorStr))handler;
 - (void)linkPortal:(Portal *)portal withPortalKey:(PortalKey *)portalKey completionHandler:(void (^)(NSString *errorStr))handler;
-
+- (void)setNotificationSettingsWithCompletionHandler:(void (^)(void))handler;
+- (void)getModifiedEntitiesByGuid:(NSString *)guid completionHandler:(void (^)(void))handler;
 - (void)cheatSetPlayerLevel;
 
 - (void)sendRequest:(NSString *)requestName params:(id)params completionHandler:(void (^)(id responseObj))handler;

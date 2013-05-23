@@ -21,12 +21,8 @@ COMPILE_ASSERT(S2::kSwapMask == 0x01 && S2::kInvertMask == 0x02,
 DEFINE_bool(s2debug, false, "");
 
 static const uint32 MIX32 = 0x12b9b0a1UL;
-#ifdef __GNUC__
-#include <ext/hash_set>
-#else
-#include <hash_set>
-#endif
-namespace __gnu_cxx {
+#include <unordered_set>
+namespace std {
 
 
 
@@ -182,7 +178,7 @@ int S2::RobustCCW(S2Point const& a, S2Point const& b, S2Point const& c) {
 // that we can verify that certain tests actually require the more advanced
 // techniques implemented by the first version.
 
-#define SIMULATION_OF_SIMPLICITY
+//#define SIMULATION_OF_SIMPLICITY
 #ifdef SIMULATION_OF_SIMPLICITY
 
 // Below we define a floating-point type with enough precision so that it can
