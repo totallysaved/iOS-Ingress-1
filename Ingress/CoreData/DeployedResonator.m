@@ -13,18 +13,10 @@
 
 const CLLocationDegrees kLatLonEarthRadius = 6371.0;
 
-double radians(double degrees) {
-    return degrees * M_PI / 180.0;
-}
-
-double degrees(double radians) {
-    return radians * 180.0 / M_PI;
-}
-
 CLLocationCoordinate2D LatLonDestPoint(CLLocationCoordinate2D origin, double bearing, CLLocationDistance distance) {
-    double brng = radians(bearing);
-    double lat1 = radians(origin.latitude);
-    double lon1 = radians(origin.longitude);
+    double brng = GLKMathDegreesToRadians(bearing);
+    double lat1 = GLKMathDegreesToRadians(origin.latitude);
+    double lon1 = GLKMathDegreesToRadians(origin.longitude);
 
     CLLocationDegrees lat2 = asin(sin(lat1) * cos(distance / kLatLonEarthRadius) +
                                   cos(lat1) * sin(distance / kLatLonEarthRadius) * cos(brng));
@@ -34,8 +26,8 @@ CLLocationCoordinate2D LatLonDestPoint(CLLocationCoordinate2D origin, double bea
 	
     CLLocationCoordinate2D coordinate;
     if (! (isnan(lat2) || isnan(lon2))) {
-        coordinate.latitude = degrees(lat2);
-        coordinate.longitude = degrees(lon2);
+        coordinate.latitude = GLKMathRadiansToDegrees(lat2);
+        coordinate.longitude = GLKMathRadiansToDegrees(lon2);
     }
 
     return coordinate;
@@ -116,6 +108,39 @@ CLLocationCoordinate2D LatLonDestPoint(CLLocationCoordinate2D origin, double bea
 
 - (NSString *)description {
 	return [NSString stringWithFormat:@"DepoloyedResonator forPortal:%@ slot:%d", self.portal.name, self.slot];
+}
+
+- (void)updateWithData:(NSDictionary *)data forPortal:(Portal *)portal {
+//    if (![self.portal.objectID isEqual:portal.objectID])
+        self.portal = portal;
+    
+    int slot = [data[@"slot"] intValue];
+    if (self.slot != slot)
+        self.slot = slot;
+    
+    int energy = [data[@"energyTotal"] intValue];
+    if (self.energy != energy )
+        self.energy = energy;
+    
+    int distanceToPortal = [data[@"distanceToPortal"] intValue];
+    if (self.distanceToPortal != distanceToPortal)
+        self.distanceToPortal = distanceToPortal;
+    
+    int level = [data[@"level"] intValue];
+    if (self.level != level)
+        self.level = level;
+    
+    User *owner = [User MR_findFirstByAttribute:@"guid" withValue:data[@"ownerGuid"]];
+    if (!owner) { owner = [User MR_createEntity]; }
+    owner.guid = data[@"ownerGuid"];
+//    if (![self.owner.objectID isEqual:owner.objectID])
+        self.owner = owner;
+}
+
++ (instancetype)resonatorWithData:(NSDictionary *)data forPortal:(Portal *)portal {
+    DeployedResonator *resonator = [DeployedResonator MR_createEntity];
+    [resonator updateWithData:data forPortal:(Portal *)portal];
+    return resonator;
 }
 
 @end

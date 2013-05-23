@@ -9,7 +9,8 @@
 #import "DeviceViewController.h"
 
 @implementation DeviceViewController {
-	NSData *imageData;
+	UIImage *imageData;
+	NSString *imageLocation;
 }
 
 - (void)viewDidLoad {
@@ -34,15 +35,20 @@
 	cell.textLabel.font = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:18];
     
     switch (indexPath.row) {
-        case 3: {
-            NSString *muteLabel = @"Mute Sound";
-            float soundVolumeValue = [[NSUserDefaults standardUserDefaults] floatForKey:kDeviceSoundLevel];
-
-            if(soundVolumeValue < 0.1){
-                muteLabel = @"Unmute Sound";
-            }
-            
-            cell.textLabel.text = muteLabel;
+        case 4: {
+            if ([[NSUserDefaults standardUserDefaults] floatForKey:kDeviceSoundLevel] < 0.1) {
+                cell.textLabel.text = @"Unmute Sound";
+            } else {
+                cell.textLabel.text = @"Mute Sound";
+			}
+            break;
+        }
+		case 5: {
+            if ([API sharedInstance].player.shouldSendEmail) {
+                cell.textLabel.text = @"Disable Email Notifications";
+            } else {
+                cell.textLabel.text = @"Enable Email Notifications";
+			}
             break;
         }
     }
@@ -64,12 +70,9 @@
 			}
 			[[NSUserDefaults standardUserDefaults] synchronize];
 
-			[Item MR_truncateAll];
-			[User MR_truncateAll];
-			[DeployedMod MR_truncateAll];
-			[DeployedResonator MR_truncateAll];
-			[PortalLink MR_truncateAll];
-			[ControlField MR_truncateAll];
+			[MagicalRecord cleanUp];
+			[[NSFileManager defaultManager] removeItemAtURL:[NSPersistentStore MR_urlForStoreName:@"Ingress.sqlite"] error:nil];
+			[MagicalRecord setupCoreDataStackWithAutoMigratingSqliteStoreNamed:@"Ingress.sqlite"];
 
 			[self dismissViewControllerAnimated:YES completion:nil];
 
@@ -98,28 +101,50 @@
 
 			break;
 		}
-            
-        case 3: {
-            NSString *muteLabel = @"Unmute Sound";
-            float currentSoundVolume = [SoundManager sharedManager].soundVolume;
-            if (currentSoundVolume < 0.1){
+
+		case 3: {
+
+			[MagicalRecord cleanUp];
+			[[NSFileManager defaultManager] removeItemAtURL:[NSPersistentStore MR_urlForStoreName:@"Ingress.sqlite"] error:nil];
+			[MagicalRecord setupCoreDataStackWithAutoMigratingSqliteStoreNamed:@"Ingress.sqlite"];
+			
+		}
+
+        case 4: {
+
+			float currentSoundVolume = [SoundManager sharedManager].soundVolume;
+			UITableViewCell *cell = [super tableView:tableView cellForRowAtIndexPath:indexPath];
+			if (currentSoundVolume < 0.1) {
+				cell.textLabel.text = @"Mute Sound";
                 currentSoundVolume = 1.0;
-                muteLabel = @"Mute Sound";
-            } else {
+			} else {
+				cell.textLabel.text = @"Unmute Sound";
                 currentSoundVolume = 0.0;
-            }
-            
-            UITableViewCell *cell = [super tableView:tableView cellForRowAtIndexPath:indexPath];
-            cell.textLabel.text = muteLabel;
-            
+			}
+
             [SoundManager sharedManager].soundVolume = currentSoundVolume;
             [SoundManager sharedManager].musicVolume = currentSoundVolume;
-            
+
             [[NSUserDefaults standardUserDefaults] setFloat:currentSoundVolume forKey:kDeviceSoundLevel];
             [[NSUserDefaults standardUserDefaults] synchronize];
             
             break;
         }
+
+		case 5: {
+
+            UITableViewCell *cell = [super tableView:tableView cellForRowAtIndexPath:indexPath];
+			if ([API sharedInstance].player.shouldSendEmail) {
+				cell.textLabel.text = @"Enable Email Notifications";
+			} else {
+				cell.textLabel.text = @"Disable Email Notifications";
+			}
+
+            [API sharedInstance].player.shouldSendEmail = ![API sharedInstance].player.shouldSendEmail;
+
+			[[API sharedInstance] setNotificationSettingsWithCompletionHandler:nil];
+			
+		}
 	}
 	
 }
@@ -128,31 +153,33 @@
 
 - (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary *)info {
 
+	imageData = nil;
+	imageLocation = nil;
+
 	NSString *mediaType = [info objectForKey:UIImagePickerControllerMediaType];
 	if ([mediaType isEqualToString:(NSString*)kUTTypeImage]) {
 		NSURL *url = [info objectForKey:UIImagePickerControllerReferenceURL];
 		if (url) {
 			[[ALAssetsLibrary new] assetForURL:url resultBlock:^(ALAsset *asset) {
 				CLLocation *location = [asset valueForProperty:ALAssetPropertyLocation];
-				UIImage *image = info[@"UIImagePickerControllerOriginalImage"];
-				imageData = [self geotagImage:image withLocation:location];
-				NSLog(@"loc: %@", location);
-			} failureBlock:^(NSError *error) {
-				NSLog(@"cant get image - %@", [error localizedDescription]);
-				imageData = nil;
-			}];
+				if (location) {
+					imageLocation = [NSString stringWithFormat:@"lat=%g\nlng=%g\n", location.coordinate.latitude, location.coordinate.longitude];
+					imageData = info[UIImagePickerControllerOriginalImage];
+					NSLog(@"imageData: %@", imageData);
+				}
+			} failureBlock:nil];
 		}
 	}
 
 	[picker dismissViewControllerAnimated:YES completion:^{
 		if (imageData) {
+			NSLog(@"imageData: %@", imageData);
 			UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"Enter title for portal" message:nil delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"OK", nil];
 			alertView.alertViewStyle = UIAlertViewStylePlainTextInput;
 			[alertView textFieldAtIndex:0].placeholder = @"Enter portal title";
 			[alertView show];
 		} else {
-			UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"Error getting photo GPS coordinates" message:nil delegate:self cancelButtonTitle:@"Dismiss" otherButtonTitles:nil];
-			alertView.alertViewStyle = UIAlertViewStylePlainTextInput;
+			UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"Error getting photo" message:nil delegate:self cancelButtonTitle:@"Dismiss" otherButtonTitles:nil];
 			[alertView show];
 		}
 	}];
@@ -168,13 +195,24 @@
 - (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
 	if (buttonIndex == 1) {
 		if ([MFMailComposeViewController canSendMail]) {
+
+			[[UINavigationBar appearance] setTitleTextAttributes:@{UITextAttributeFont: [UIFont boldSystemFontOfSize:18]}];
+			[[UIBarButtonItem appearance] setTitleTextAttributes:@{UITextAttributeFont: [UIFont boldSystemFontOfSize:12]} forState:UIControlStateNormal];
+
 			MFMailComposeViewController *mailVC = [MFMailComposeViewController new];
 			[mailVC setMailComposeDelegate:self];
 			[mailVC setToRecipients:@[@"super-ops@google.com"]];
 			[mailVC setSubject:[alertView textFieldAtIndex:0].text];
-			[mailVC addAttachmentData:imageData mimeType:@"image/jpg" fileName:@"portal_image.jpg"];
-			[self presentViewController:mailVC animated:YES completion:nil];
-			imageData = nil;
+			[mailVC setMessageBody:imageLocation isHTML:NO];
+			[mailVC addAttachmentData:UIImageJPEGRepresentation(imageData, .75) mimeType:@"image/jpg" fileName:@"portal_image.jpg"];
+			[self presentViewController:mailVC animated:YES completion:^{
+				
+				[[UINavigationBar appearance] setTitleTextAttributes:@{UITextAttributeFont: [UIFont fontWithName:@"Coda-Regular" size:16]}];
+				[[UIBarButtonItem appearance] setTitleTextAttributes:@{UITextAttributeFont: [UIFont fontWithName:@"Coda-Regular" size:10]} forState:UIControlStateNormal];
+				imageData = nil;
+				imageLocation = nil;
+				
+			}];
 		} else {
 			UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"Error while sending mail" message:nil delegate:self cancelButtonTitle:@"Dismiss" otherButtonTitles:nil];
 			[alertView show];
@@ -195,69 +233,6 @@
 		UIImagePickerController *vc = (UIImagePickerController *)segue.destinationViewController;
 		vc.delegate = self;
 	}
-}
-
-#pragma mark - UIImage with GPS
-
-- (NSMutableArray *)createLocArray:(double)val{
-    val = fabs(val);
-    NSMutableArray* array = [[NSMutableArray alloc] init];
-    double deg = (int)val;
-    [array addObject:[NSNumber numberWithDouble:deg]];
-    val = val - deg;
-    val = val*60;
-    double minutes = (int) val;
-    [array addObject:[NSNumber numberWithDouble:minutes]];
-    val = val - minutes;
-    val = val*60;
-    double seconds = val;
-    [array addObject:[NSNumber numberWithDouble:seconds]];
-    return array;
-}
-
-- (void)populateGPS:(EXFGPSLoc *)gpsLoc locArray:(NSArray *)locArray{
-    long numDenumArray[2];
-    long* arrPtr = numDenumArray;
-    [EXFUtils convertRationalToFraction:&arrPtr :[locArray objectAtIndex:0]];
-    EXFraction* fract = [[EXFraction alloc] initWith:numDenumArray[0]:numDenumArray[1]];
-    gpsLoc.degrees = fract;
-    [EXFUtils convertRationalToFraction:&arrPtr :[locArray objectAtIndex:1]];
-    fract = [[EXFraction alloc] initWith:numDenumArray[0] :numDenumArray[1]];
-    gpsLoc.minutes = fract;
-    [EXFUtils convertRationalToFraction:&arrPtr :[locArray objectAtIndex:2]];
-    fract = [[EXFraction alloc] initWith:numDenumArray[0] :numDenumArray[1]];
-    gpsLoc.seconds = fract;
-}
-
-- (NSData *)geotagImage:(UIImage *)image withLocation:(CLLocation *)imageLocation {
-    NSData *jpegData =  UIImageJPEGRepresentation(image, 0.8);
-    EXFJpeg *jpegScanner = [EXFJpeg new];
-    [jpegScanner scanImageData: jpegData];
-    EXFMetaData* exifMetaData = jpegScanner.exifMetaData;
-    // end of helper methods
-    // adding GPS data to the Exif object
-    NSMutableArray* locArray = [self createLocArray:imageLocation.coordinate.latitude];
-    EXFGPSLoc* gpsLoc = [[EXFGPSLoc alloc] init];
-    [self populateGPS:gpsLoc locArray:locArray];
-    [exifMetaData addTagValue:gpsLoc forKey:[NSNumber numberWithInt:EXIF_GPSLatitude] ];
-    locArray = [self createLocArray:imageLocation.coordinate.longitude];
-    gpsLoc = [[EXFGPSLoc alloc] init];
-    [self populateGPS:gpsLoc locArray:locArray];
-    [exifMetaData addTagValue:gpsLoc forKey:[NSNumber numberWithInt:EXIF_GPSLongitude] ];
-    NSString* ref;
-    if (imageLocation.coordinate.latitude <0.0)
-        ref = @"S";
-    else
-        ref =@"N";
-    [exifMetaData addTagValue: ref forKey:[NSNumber numberWithInt:EXIF_GPSLatitudeRef] ];
-    if (imageLocation.coordinate.longitude <0.0)
-        ref = @"W";
-    else
-        ref =@"E";
-    [exifMetaData addTagValue: ref forKey:[NSNumber numberWithInt:EXIF_GPSLongitudeRef] ];
-    NSMutableData* taggedJpegData = [NSMutableData data];
-    [jpegScanner populateImageData:taggedJpegData];
-    return taggedJpegData;
 }
 
 @end

@@ -7,6 +7,9 @@
 //
 
 #import "CommTableViewController.h"
+#import "CommViewController.h"
+
+#import "CommViewController.h"
 
 @implementation CommTableViewController
 
@@ -22,6 +25,9 @@
 	self.factionOnly = NO;
 	
 	[self.refreshControl addTarget:self action:@selector(refresh) forControlEvents:UIControlEventValueChanged];
+
+	self.tableView.contentInset = UIEdgeInsetsMake(64, 0, 0, 0);
+	self.tableView.scrollIndicatorInsets = UIEdgeInsetsMake(64, 0, 0, 0);
 	
 }
 
@@ -111,6 +117,16 @@
 	cell.mentionsYou = plext.mentionsYou;
 	return cell;
 	
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+	Plext *plext = [self.fetchedResultsController objectAtIndexPath:indexPath];
+	User *sender = plext.sender;
+
+	if (sender && ![sender.guid isEqualToString:[API sharedInstance].player.guid]) {
+		CommViewController *commVC = (CommViewController *)self.parentViewController;
+		[commVC mentionUser:plext.sender];
+	}
 }
 
 @end

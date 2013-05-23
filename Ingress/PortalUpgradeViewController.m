@@ -8,21 +8,25 @@
 
 #import "PortalUpgradeViewController.h"
 
-@implementation PortalUpgradeViewController
+@implementation PortalUpgradeViewController {
+	int currentSlotForDeploy;
+}
 
 - (void)viewDidLoad {
 	[super viewDidLoad];
 
-//	CGFloat viewWidth = [UIScreen mainScreen].bounds.size.width;
-//	CGFloat viewHeight = [UIScreen mainScreen].bounds.size.height-113;
-//
-//	_carousel = [[iCarousel alloc] initWithFrame:self.view.bounds];
-//	_carousel.frame = CGRectMake(0, 100, viewWidth, viewHeight-110);
+	CGFloat viewWidth = [UIScreen mainScreen].bounds.size.width;
+	CGFloat viewHeight = [UIScreen mainScreen].bounds.size.height-113;
+
+	_carousel = [[iCarousel alloc] initWithFrame:self.view.bounds];
+	_carousel.frame = CGRectMake(0, 100, viewWidth, viewHeight-110);
+	_carousel.backgroundColor = self.view.backgroundColor;
 //	_carousel.backgroundColor = [UIColor colorWithRed:0 green:.5 blue:1 alpha:.5];
-//	_carousel.type = iCarouselTypeCylinder;
-//    _carousel.delegate = self;
-//    _carousel.dataSource = self;
-//	[self.view addSubview:_carousel];
+	_carousel.type = iCarouselTypeCylinder;
+    _carousel.delegate = self;
+    _carousel.dataSource = self;
+	[self.view addSubview:_carousel];
+	[_carousel scrollToItemAtIndex:2 animated:NO];
 
 }
 
@@ -31,7 +35,7 @@
     _carousel.dataSource = nil;
 }
 
-- (void)viewDidLayoutSubviews {
+- (void)viewWillLayoutSubviews {
 	[self refresh];
 }
 
@@ -44,10 +48,10 @@
 	for (int i = 0; i < 8; i++) {
 
 		UIButton *button = (UIButton *)[self.view viewWithTag:50+i];
-		if (self.portal.controllingTeam && ([self.portal.controllingTeam isEqualToString:[API sharedInstance].playerInfo[@"team"]] || [self.portal.controllingTeam isEqualToString:@"NEUTRAL"])) {
+		if (self.portal.controllingTeam && ([self.portal.controllingTeam isEqualToString:[API sharedInstance].player.team] || [self.portal.controllingTeam isEqualToString:@"NEUTRAL"])) {
 			button.titleLabel.font = [UIFont fontWithName:[[[UIButton appearance] font] fontName] size:10];
 			[button setTitle:@"DEPLOY" forState:UIControlStateNormal];
-			tmpResonators[i] = @0;
+			tmpResonators[i] = [NSNull null];
 		} else {
 			[button setHidden:YES];
 		}
@@ -64,12 +68,26 @@
 		DeployedMod *mod = [DeployedMod MR_findFirstWithPredicate:[NSPredicate predicateWithFormat:@"portal = %@ && slot = %d", self.portal, i]];
 
 		if ([mod isKindOfClass:[DeployedShield class]]) {
-			[button setTitle:[[(DeployedShield *)mod rarityStr] stringByAppendingString:@"\nShield"] forState:UIControlStateNormal];
+//			[button setTitle:[[(DeployedShield *)mod rarityStr] stringByAppendingString:@"\nShield"] forState:UIControlStateNormal];
+			switch ([(DeployedShield *)mod rarity]) {
+				case PortalShieldRarityCommon:
+					[button setImage:[UIImage imageNamed:@"shield_common.png"] forState:UIControlStateNormal];
+					break;
+				case PortalShieldRarityRare:
+					[button setImage:[UIImage imageNamed:@"shield_rare.png"] forState:UIControlStateNormal];
+					break;
+				case PortalShieldRarityVeryRare:
+					[button setImage:[UIImage imageNamed:@"shield_veryrare.png"] forState:UIControlStateNormal];
+					break;
+				default:
+					[button setImage:[UIImage imageNamed:@"shield_common.png"] forState:UIControlStateNormal];
+					break;
+			}
 		} else {
-			[button setTitle:@"-" forState:UIControlStateNormal];
+			[button setImage:nil forState:UIControlStateNormal];
 		}
 
-		if (self.portal.controllingTeam && ([self.portal.controllingTeam isEqualToString:[API sharedInstance].playerInfo[@"team"]] || [self.portal.controllingTeam isEqualToString:@"NEUTRAL"])) {
+		if (self.portal.controllingTeam && ([self.portal.controllingTeam isEqualToString:[API sharedInstance].player.team] || [self.portal.controllingTeam isEqualToString:@"NEUTRAL"])) {
 			[button setEnabled:YES];
 		} else {
 			[button setEnabled:NO];
@@ -83,10 +101,10 @@
 
 			int slot = resonator.slot;
 
-			if ([self.portal.controllingTeam isEqualToString:[API sharedInstance].playerInfo[@"team"]]) {
+			if (self.portal.controllingTeam && ([self.portal.controllingTeam isEqualToString:[API sharedInstance].player.team] || [self.portal.controllingTeam isEqualToString:@"NEUTRAL"])) {
 				UIButton *button = (UIButton *)[self.view viewWithTag:50+slot];
 				[button setTitle:@"UPGRADE" forState:UIControlStateNormal];
-				tmpResonators[slot] = @1;
+				tmpResonators[slot] = resonator;
 			}
 
 		}
@@ -94,6 +112,8 @@
 	}
 
 	_resonators = tmpResonators;
+
+	[_carousel reloadData];
 	
 }
 
@@ -104,28 +124,57 @@
 }
 
 - (UIView *)carousel:(iCarousel *)carousel viewForItemAtIndex:(NSUInteger)index reusingView:(UIView *)view {
+    
+	DeployedResonator *resonator = _resonators[index];
 	
     UILabel *label = nil;
+	GUIButton *deployButton = nil;
+	GUIButton *rechargeButton = nil;
+    
+    if (!view) {
+        
+		view = [[GlowingLabel alloc] initWithFrame:CGRectMake(0, 0, 220, 220)];
+//        view.backgroundColor = [[UIColor whiteColor] colorWithAlphaComponent:.95];
+		view.backgroundColor = [UIColor colorWithRed:16.0/255.0 green:32.0/255.0 blue:34.0/255.0 alpha:0.95];
 
-    if (view == nil) {
-		//        view = [[[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 200.0f, 200.0f)] autorelease];
-		//        ((UIImageView *)view).image = [UIImage imageNamed:@"page.png"];
-		//        view.contentMode = UIViewContentModeCenter;
-		view = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 200, 200)];
-		view.backgroundColor = [[UIColor whiteColor] colorWithAlphaComponent:.5];
-
-        label = [[UILabel alloc] initWithFrame:view.bounds];
+        label = [[GlowingLabel alloc] initWithFrame:CGRectMake(0, 0, 220, 112)];
         label.backgroundColor = [UIColor clearColor];
+        label.textColor = [UIColor whiteColor];
         label.textAlignment = NSTextAlignmentCenter;
-        label.font = [label.font fontWithSize:50];
+        label.font = [label.font fontWithSize:20];
+		label.numberOfLines = 0;
         label.tag = 1;
         [view addSubview:label];
+        
+		deployButton = [[GUIButton alloc] initWithFrame:CGRectMake(20, 112, 180, 44)];
+		[deployButton addTarget:self action:@selector(resonatorButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
+        deployButton.tag = 2;
+        [view addSubview:deployButton];
+
+		rechargeButton = [[GUIButton alloc] initWithFrame:CGRectMake(20, 166, 180, 44)];
+		[rechargeButton setTitle:@"RECHARGE" forState:UIControlStateNormal];
+		[rechargeButton addTarget:self action:@selector(rechargeButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
+        rechargeButton.tag = 3;
+        [view addSubview:rechargeButton];
+        
     } else {
         label = (UILabel *)[view viewWithTag:1];
+        deployButton = (GUIButton *)[view viewWithTag:2];
+        rechargeButton = (GUIButton *)[view viewWithTag:3];
     }
-
-    label.text = [@(index+1) stringValue];
-
+    
+	view.tag = index;
+	NSString *resonatorOctant = @[@"E", @"NE", @"N", @"NW", @"W", @"SW", @"S", @"SE"][index];
+    
+	if (![resonator isKindOfClass:[NSNull class]]) {
+		label.text = [NSString stringWithFormat:@"Octant: %@\nLevel: %d\n%d / %d XM", resonatorOctant, resonator.level, resonator.energy, [API maxEnergyForResonatorLevel:resonator.level]];
+		[deployButton setTitle:@"UPGRADE" forState:UIControlStateNormal];
+	} else {
+		label.text = [NSString stringWithFormat:@"Octant: %@", resonatorOctant];
+        
+		[deployButton setTitle:@"DEPLOY" forState:UIControlStateNormal];
+	}
+    
     return view;
 	
 }
@@ -146,6 +195,10 @@
 	
 }
 
+//- (void)carouselCurrentItemIndexDidChange:(iCarousel *)carousel {
+//	
+//}
+
 #pragma mark - Resonators
 
 - (IBAction)resonatorButtonPressed:(GUIButton *)sender {
@@ -160,7 +213,7 @@
 
 	_levelChooser = [LevelChooserViewController levelChooserWithTitle:@"Choose resonator level" completionHandler:^(int level) {
 		[HUD hide:YES];
-		[self deployResonatorOfLevel:level toSlot:sender.tag-50];
+		[self deployResonatorOfLevel:level toSlot:sender.superview.tag];
 		_levelChooser = nil;
 	}];
 	HUD.customView = _levelChooser.view;
@@ -172,9 +225,7 @@
 
 - (void)deployResonatorOfLevel:(int)level toSlot:(int)slot {
 
-	[[SoundManager sharedManager] playSound:@"Sound/sfx_resonator_power_up.aif"];
-
-	if ([_resonators[slot] intValue] == 0) {
+	if ([_resonators[slot] isKindOfClass:[NSNull class]]) {
 
 		Resonator *resonatorItem = [Resonator MR_findFirstWithPredicate:[NSPredicate predicateWithFormat:@"dropped = NO && level = %d", level]];
 
@@ -218,7 +269,12 @@
 					[HUD hide:YES afterDelay:3];
 				} else {
 
-					[self refresh];
+					dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(.1 * NSEC_PER_SEC));
+					dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+						[self refresh];
+					});
+
+					[[SoundManager sharedManager] playSound:@"Sound/sfx_resonator_power_up.aif"];
 
 					[[API sharedInstance] playSounds:@[@"SPEECH_RESONATOR", @"SPEECH_DEPLOYED"]];
 
@@ -232,7 +288,7 @@
 
 		}
 
-	} else if ([_resonators[slot] intValue] == 1) {
+	} else {
 
 		Resonator *resonatorItem = [Resonator MR_findFirstWithPredicate:[NSPredicate predicateWithFormat:@"dropped = NO && level = %d", level]];
 
@@ -275,7 +331,12 @@
 					[HUD hide:YES afterDelay:3];
 				} else {
 
-					[self refresh];
+					dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(.1 * NSEC_PER_SEC));
+					dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+						[self refresh];
+					});
+
+					[[SoundManager sharedManager] playSound:@"Sound/sfx_resonator_power_up.aif"];
 
 					[[API sharedInstance] playSounds:@[@"SPEECH_RESONATOR", @"SPEECH_UPGRADED"]];
 
@@ -287,6 +348,43 @@
 
 	}
 
+}
+
+- (IBAction)rechargeButtonPressed:(GUIButton *)sender {
+
+	__block MBProgressHUD *HUD = [[MBProgressHUD alloc] initWithView:[AppDelegate instance].window];
+	HUD.userInteractionEnabled = YES;
+	HUD.mode = MBProgressHUDModeIndeterminate;
+	HUD.dimBackground = YES;
+	HUD.labelFont = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:16];
+	HUD.labelText = @"Recharging...";
+	[[AppDelegate instance].window addSubview:HUD];
+	[HUD show:YES];
+
+	[[API sharedInstance] rechargePortal:self.portal slots:@[@(sender.superview.tag)] completionHandler:^(NSString *errorStr) {
+
+		[HUD hide:YES];
+
+		if (errorStr) {
+
+			MBProgressHUD *HUD = [[MBProgressHUD alloc] initWithView:[AppDelegate instance].window];
+			HUD.userInteractionEnabled = YES;
+			HUD.dimBackground = YES;
+			HUD.mode = MBProgressHUDModeCustomView;
+			HUD.customView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"warning.png"]];
+			HUD.detailsLabelFont = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:16];
+			HUD.detailsLabelText = errorStr;
+			[[AppDelegate instance].window addSubview:HUD];
+			[HUD show:YES];
+			[HUD hide:YES afterDelay:3];
+
+		} else {
+			[[SoundManager sharedManager] playSound:@"Sound/sfx_resonator_recharge.aif"];
+			[[API sharedInstance] playSounds:@[@"SPEECH_RESONATOR", @"SPEECH_RECHARGED"]];
+		}
+
+	}];
+	
 }
 
 #pragma mark - Shields

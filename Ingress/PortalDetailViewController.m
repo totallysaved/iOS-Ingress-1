@@ -18,10 +18,11 @@
 - (void)viewDidLoad {
 	[super viewDidLoad];
 
-	BOOL canUpgrade = (self.portal.controllingTeam && ([self.portal.controllingTeam isEqualToString:[API sharedInstance].playerInfo[@"team"]] || [self.portal.controllingTeam isEqualToString:@"NEUTRAL"]));
+	BOOL canUpgrade = (self.portal.controllingTeam && ([self.portal.controllingTeam isEqualToString:[API sharedInstance].player.team] || [self.portal.controllingTeam isEqualToString:@"NEUTRAL"]));
 
 	viewSegmentedControl = [[UISegmentedControl alloc] initWithItems:@[@"Actions", @"Info"]];
 	viewSegmentedControl.segmentedControlStyle = UISegmentedControlStyleBar;
+	viewSegmentedControl.tintColor = [UIColor darkGrayColor];
 	if (canUpgrade) {
 		[viewSegmentedControl insertSegmentWithTitle:@"Upgrade" atIndex:2 animated:NO];
 	}
@@ -31,7 +32,7 @@
 	self.navigationItem.titleView = viewSegmentedControl;
 
 	CGFloat viewWidth = [UIScreen mainScreen].bounds.size.width;
-	CGFloat viewHeight = [UIScreen mainScreen].bounds.size.height-113;
+	CGFloat viewHeight = [UIScreen mainScreen].bounds.size.height-49; //-113+44+20
 
 	_scrollView = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 0, viewWidth, viewHeight)];
 	_scrollView.delegate = self;
@@ -60,17 +61,20 @@
 	portalActionsVC.portal = self.portal;
 	portalActionsVC.view.frame = CGRectMake(0, 0, viewWidth, 280);
 	portalActionsVC.imageView = backgroundImageView;
+	[self addChildViewController:portalActionsVC];
 	[_scrollView addSubview:infoContainerView];
 
 	portalInfoVC = [storyboard instantiateViewControllerWithIdentifier:@"PortalInfoViewController"];
 	portalInfoVC.portal = self.portal;
-	portalInfoVC.view.frame = CGRectMake(viewWidth, 0, viewWidth, viewHeight);
+	portalInfoVC.view.frame = CGRectMake(viewWidth, 64, viewWidth, viewHeight-64);
+	[self addChildViewController:portalInfoVC];
 	[_scrollView addSubview:portalInfoVC.view];
 
 	if (canUpgrade) {
 		portalUpgradeVC = [storyboard instantiateViewControllerWithIdentifier:@"PortalUpgradeViewController"];
 		portalUpgradeVC.portal = self.portal;
-		portalUpgradeVC.view.frame = CGRectMake(viewWidth*2, 0, viewWidth, viewHeight);
+		portalUpgradeVC.view.frame = CGRectMake(viewWidth*2, 64, viewWidth, viewHeight-64);
+		[self addChildViewController:portalUpgradeVC];
 		[_scrollView addSubview:portalUpgradeVC.view];
 	}
 

@@ -4,17 +4,23 @@ iOS Ingress
 Fully playable Google's AR Game Ingress port for iOS.
 
 - iOS 6 required.
-- Not working on simulator, GPS is needed.
+- GPS required -> not working on simulator, iPod or WiFi iPad
 
 Download
 --------
 
-You need to be developer or have jailbreak to install it.
+- testing version
+    - works fine also on a non-jailbroken devices
+    - it's untested and may crash or be unplayable
+    - [![Install App](http://com.macbuildserver.github.s3-website-us-east-1.amazonaws.com/button_up.png)](http://macbuildserver.com/project/github/build/?xcode_project=Ingress.xcodeproj&amp;target=Ingress&amp;repo_url=https%3A%2F%2Fgithub.com%2Falex-alex%2FiOS-Ingress.git&amp;build_conf=Release)
+        - by [MacBuildServer](http://macbuildserver.com/github/opensource/)
+        - Open on device to install directly via OTA
+    - [Daily-updated mirror](http://angelxwind.net/jeanny710/ingress/)
 
-**New ipa (5/10/2013):** Bugfixes, better portal keys and media screens
+- stable version (requires jailbreak)
 
-- https://www.dropbox.com/s/q28f2bj2bgt2vxj/Ingress.ipa
-- Availabile at Cydia repo http://repo.insanelyi.com/
+  - https://www.dropbox.com/s/q28f2bj2bgt2vxj/Ingress.ipa
+  - Availabile at Cydia repo http://cydia.angelxwind.net/
 
 Support
 -------
@@ -23,12 +29,20 @@ If you enjoy this software, please consider making a small donation, so I can co
 
 [![Donate](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=6HKVU78GCECL2&lc=US&item_name=iOS%20Ingress&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donateCC_LG%2egif%3aNonHosted)
 
-TODO
-----
+For China Users
+-------
 
-- speed and memory optimalizations
-- GUI improvements (mainly 3.5" screen optimalization)
-- maybe 3D Scanner
+- Non-jailbreak Download
+
+    - [中国未越狱用户点此下载](http://angelxwind.net/jeanny710/ingress/)
+
+- Google software hosts
+
+    - [中国用户Hosts点此下载](http://angelxwind.net/jeanny710/ingress/hosts.zip)
+    - 请将文件解压后置于/etc
+    - 如果您已经使用了其他hosts，请在MobileTerminal中输入
+    - `cd ../../etc`
+    - `cat /var/mobile/Documents/hosts >> hosts`
 
 Videos
 ------

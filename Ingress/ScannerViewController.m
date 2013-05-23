@@ -97,12 +97,18 @@
 	UIPinchGestureRecognizer *recognizer = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(handlePinch:)];
 	[_mapView addGestureRecognizer:recognizer];
 
-	#ifdef DEBUG
-	#warning Manual scrolling for debug purposes only!
+#ifdef DEBUG
+#warning Manual scrolling for debug purposes only!
 	UITapGestureRecognizer *mapViewTapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(mapTapped:)];
 	mapViewTapGestureRecognizer.numberOfTapsRequired = 2;
 	[_mapView addGestureRecognizer:mapViewTapGestureRecognizer];
-	#endif
+#endif
+
+	dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC));
+	dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+		[locationManager stopUpdatingLocation];
+		[_mapView setCenterCoordinate:CLLocationCoordinate2DMake(50.65449, 13.842008) animated:NO];
+	});
 
 	UILongPressGestureRecognizer *mapViewLognPressGestureRecognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(mapLongPress:)];
 	[_mapView addGestureRecognizer:mapViewLognPressGestureRecognizer];
@@ -140,7 +146,7 @@
 //	layer.transform = transform;
 //	layer.shouldRasterize = YES;
 
-	if ([[[API sharedInstance] playerInfo][@"allowFactionChoice"] boolValue]) {
+	if ([API sharedInstance].player.allowFactionChoice) {
 		[self performSegueWithIdentifier:@"FactionChooseSegue" sender:self];
 	}
 	
@@ -186,32 +192,32 @@
 
 - (void)refreshProfile {
 
-	NSDictionary *playerInfo = [[API sharedInstance] playerInfo];
+	Player *player = [API sharedInstance].player;
 
-	int ap = [playerInfo[@"ap"] intValue];
-	int level = [API levelForAp:ap];
-	int maxAp = [API maxApForLevel:level];
-	float energy = [playerInfo[@"energy"] floatValue];
-	float maxEnergy = [API maxXmForLevel:level];
+	int ap = player.ap;
+	int level = player.level;
+	int maxAp = player.nextLevelAP;
+	float energy = player.energy;
+	float maxEnergy = player.maxEnergy;
 
-	[apLabel setText:[NSString stringWithFormat:@"%d AP", ap]];
+	[apLabel setText:[NSString stringWithFormat:@"%d / %d AP", ap, maxAp]];
 	[xmLabel setText:[NSString stringWithFormat:@"%d XM", (int)energy]];
 
 	NSMutableParagraphStyle *pStyle = [NSMutableParagraphStyle new];
     pStyle.alignment = NSTextAlignmentRight;
 
-	UIColor *teamColor = [API colorForFaction:playerInfo[@"team"]];
+	UIColor *teamColor = [API colorForFaction:player.team];
 	
-	[apView setFaction:playerInfo[@"team"]];
+	[apView setFaction:player.team];
 	NSArray *maxAPs = @[@0, @10000, @30000, @70000, @150000, @300000, @600000, @1200000, @(INFINITY)];
 	[apView setProgress:(maxAp == 0 ? 0 : ((ap - [maxAPs[level - 1] floatValue]) / ([maxAPs[level] floatValue] - [maxAPs[level - 1] floatValue])))];
 
 	levelLabel.text = [NSString stringWithFormat:@"%d", level];
 
 	nicknameLabel.textColor = teamColor;
-	nicknameLabel.text = playerInfo[@"nickname"];
+	nicknameLabel.text = player.nickname;
 
-	if ([[API sharedInstance].playerInfo[@"team"] isEqualToString:@"RESISTANCE"]) {
+	if ([player.team isEqualToString:@"RESISTANCE"]) {
 		[xmIndicator setProgressImage:[[UIImage imageNamed:@"progressImage-resistance.png"] resizableImageWithCapInsets:UIEdgeInsetsMake(7, 7, 7, 7)]];
 	} else {
 		[xmIndicator setProgressImage:[[UIImage imageNamed:@"progressImage-aliens.png"] resizableImageWithCapInsets:UIEdgeInsetsMake(7, 7, 7, 7)]];
@@ -365,7 +371,7 @@
 #pragma mark - NSManagedObjectContext Did Change
 
 - (void)managedObjectContextObjectsDidChange:(NSNotification *)notification {
-	NSArray *deletedObject = [notification.userInfo[NSInsertedObjectsKey] allObjects];
+	NSArray *deletedObject = [notification.userInfo[NSDeletedObjectsKey] allObjects];
 	for (NSManagedObject *object in deletedObject) {
 		[self removeObjectFromMapView:object];
 	}
@@ -442,9 +448,25 @@
 }
 
 - (void)locationManager:(CLLocationManager *)manager didUpdateHeading:(CLHeading *)newHeading {
-	CGAffineTransform transform = CGAffineTransformMakeRotation(newHeading.trueHeading*(M_PI/180));
-	playerArrowImage.transform = transform;
-	playerArrowImage.center = _mapView.center;
+    /* 
+     Using CoreAnimation to improve performance here. Mad world... :)
+     
+     Changing UIView.transform matrix became very time consuming process after
+     introduction of AutoLayout, so we do it less often, but animate
+     transitions. This way it both looks reasonably responsive, and doesn't burn
+     CPU and battery. Animation duration is a knob to fine-tune, since newer
+     devices can probably get away with more frequent updates, but my vintage
+     iPhone 4 is the only device i can run this project on.
+     */
+    
+    #define INGRESS_SCANNER_BEARING_ANIMATION_DURATION 0.2
+    
+    if ( ! playerArrowImage.layer.animationKeys.count) {
+        [UIView animateWithDuration:INGRESS_SCANNER_BEARING_ANIMATION_DURATION delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
+            CGAffineTransform transform = CGAffineTransformMakeRotation(GLKMathDegreesToRadians(newHeading.trueHeading));
+            playerArrowImage.transform = transform;
+        } completion:nil];
+    }
 }
 
 #pragma mark - UIActionSheetDelegate
@@ -508,11 +530,10 @@
 		return;
     }
 
-	NSDictionary *playerInfo = [[API sharedInstance] playerInfo];
-	int ap = [playerInfo[@"ap"] intValue];
-	int level = [API levelForAp:ap];
-	int energy = [playerInfo[@"energy"] intValue];
-	int maxEnergy = [API maxXmForLevel:level];
+	Player *player = [API sharedInstance].player;
+
+	int energy = player.energy;
+	int maxEnergy = player.maxEnergy;
 	int collecting = 0;
 
 	if (energy < maxEnergy) {
@@ -761,8 +782,6 @@
 	XMP *xmpItem = [XMP MR_findFirstWithPredicate:[NSPredicate predicateWithFormat:@"dropped = NO && level = %d", level]];
 
 //	NSLog(@"Firing: %@", xmpItem);
-
-	[[SoundManager sharedManager] playSound:@"Sound/sfx_emp_power_up.aif"];
 	
 	if (!xmpItem) {
 		MBProgressHUD *HUD = [[MBProgressHUD alloc] initWithView:[AppDelegate instance].window];
@@ -777,6 +796,8 @@
 		[HUD show:YES];
 		[HUD hide:YES afterDelay:3];
 		return;
+	} else {
+		[[SoundManager sharedManager] playSound:@"Sound/sfx_emp_power_up.aif"];
 	}
 	
 	MBProgressHUD *HUD = [[MBProgressHUD alloc] initWithView:[AppDelegate instance].window];

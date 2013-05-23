@@ -20,6 +20,11 @@
 
 - (void)viewDidLoad {
 	[super viewDidLoad];
+
+	if (!self.linkingPortal) {
+		self.tableView.contentInset = UIEdgeInsetsMake(64, 0, 0, 0);
+		self.tableView.scrollIndicatorInsets = UIEdgeInsetsMake(64, 0, 0, 0);
+	}
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -164,6 +169,8 @@
 						[HUD show:YES];
 						[HUD hide:YES afterDelay:3];
 					} else {
+
+						[[SoundManager sharedManager] playSound:@"Sound/sfx_link_power_up.aif"];
 
 						[[API sharedInstance] playSound:@"SPEECH_PORTAL_LINK_ESTABLISHED"];
 
